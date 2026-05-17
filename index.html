@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -9,7 +10,39 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
+  <script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import {
+  getDatabase,
+  ref,
+  set,
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBSNQDaneruXSg6v7H17t7GZbtKMfVhtG0",
+  authDomain: "rom-betito.firebaseapp.com",
+  databaseURL: "https://rom-betito-default-rtdb.firebaseio.com",
+  projectId: "rom-betito",
+  storageBucket: "rom-betito.firebasestorage.app",
+  messagingSenderId: "733978380183",
+  appId: "1:733978380183:web:e5b6249b68550a782966d2",
+  measurementId: "G-ZZZBWETCCB"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getDatabase(app);
+
+window.db = db;
+window.ref = ref;
+window.set = set;
+window.onValue = onValue;
+
+</script>
+ body {
     font-family: 'Segoe UI', 'Heebo', 'Arial', sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
