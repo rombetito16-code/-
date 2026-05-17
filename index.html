@@ -1,0 +1,2943 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>קושקושונים אימפריה</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Heebo', 'Arial', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #2d3748;
+    padding: 20px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  header h1 {
+    font-size: 28px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 4px; }
+  .updated-stamp {
+    font-size: 12px;
+    color: #a0aec0;
+    font-weight: 500;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .rate-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f7fafc;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #4a5568;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+  }
+  .rate-display:hover { background: #edf2f7; }
+  .rate-display .rate-value { font-weight: 700; color: #2d3748; }
+  .rate-display .rate-icon { font-size: 16px; }
+  .month-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .month-selector button {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+  }
+  .month-selector button:hover { background: #edf2f7; }
+  .month-selector span {
+    font-size: 18px;
+    font-weight: 600;
+    min-width: 160px;
+    text-align: center;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-4px); }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+  }
+  .stat-card.income::before { background: #48bb78; }
+  .stat-card.expense::before { background: #f56565; }
+  .stat-card.balance::before { background: #4299e1; }
+  .stat-card.budget::before { background: #ed8936; }
+  .stat-card .label {
+    font-size: 14px;
+    color: #718096;
+    margin-bottom: 8px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+  }
+  .stat-card.income .value { color: #48bb78; }
+  .stat-card.expense .value { color: #f56565; }
+  .stat-card.balance .value { color: #4299e1; }
+  .stat-card.budget .value { color: #ed8936; }
+  .stat-card .sub {
+    font-size: 12px;
+    color: #a0aec0;
+    margin-top: 4px;
+  }
+  .accounts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 700px) { .accounts-grid { grid-template-columns: 1fr; } }
+  .account-card {
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .account-card.checking { background: linear-gradient(135deg, #4299e1, #2b6cb0); }
+  .account-card.savings { background: linear-gradient(135deg, #48bb78, #2f855a); }
+  .account-card.networth { background: linear-gradient(135deg, #9f7aea, #6b46c1); }
+  .accounts-grid { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 900px) { .accounts-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px) { .accounts-grid { grid-template-columns: 1fr; } }
+  .account-card::after {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: -40px;
+    width: 140px;
+    height: 140px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .account-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .account-name { font-size: 16px; font-weight: 600; opacity: 0.95; }
+  .account-icon { font-size: 28px; }
+  .account-balance {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+  }
+  .account-sub {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .account-actions {
+    display: flex;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+  }
+  .account-actions button {
+    flex: 1;
+    min-width: 90px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+  }
+  .account-actions button:hover { background: rgba(255,255,255,0.3); }
+  .history-list {
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f7fafc;
+  }
+  .history-item .h-info { flex: 1; }
+  .history-item .h-title { font-weight: 600; font-size: 14px; }
+  .history-item .h-meta { font-size: 12px; color: #a0aec0; }
+  .history-item .h-amount { font-weight: 700; }
+  .history-item .h-amount.in { color: #48bb78; }
+  .history-item .h-amount.out { color: #f56565; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .checkbox-row input { width: auto; }
+  .savings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .savings-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 22px 24px;
+    background: linear-gradient(135deg, #f0fff4 0%, #ffffff 70%);
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr auto;
+    gap: 20px;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .savings-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  .savings-card.no-return { background: linear-gradient(135deg, #f7fafc 0%, #ffffff 70%); }
+  @media (max-width: 800px) {
+    .savings-card { grid-template-columns: 1fr; gap: 12px; }
+  }
+  .sv-col-main { min-width: 0; }
+  .sv-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .savings-card .sv-name {
+    font-size: 19px; font-weight: 700; color: #2f855a;
+    cursor: pointer; padding: 2px 6px; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .savings-card .sv-name:hover { background: rgba(72,187,120,0.1); }
+  .savings-card .sv-name-input {
+    font-size: 19px; font-weight: 700; color: #2f855a;
+    border: 2px solid #48bb78; border-radius: 6px; padding: 2px 6px;
+    font-family: inherit; width: 100%; max-width: 280px;
+  }
+  .savings-card .sv-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sv-badge {
+    font-size: 11px; padding: 3px 9px; border-radius: 12px;
+    background: #e6fffa; color: #2c7a7b; font-weight: 600;
+  }
+  .sv-badge.return { background: #c6f6d5; color: #22543d; }
+  .sv-badge.recurring { background: #fef5e7; color: #c05621; }
+  .sv-badge.paused { background: #edf2f7; color: #718096; }
+  .sv-recent {
+    font-size: 12px; color: #a0aec0; margin-top: 6px;
+  }
+  .sv-col-balance { text-align: center; }
+  .sv-col-balance .label { font-size: 11px; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .sv-col-balance .sv-balance { font-size: 28px; font-weight: 700; color: #2d3748; }
+  .sv-col-rate { text-align: center; }
+  .sv-col-rate .label { font-size: 11px; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .sv-rate-display {
+    font-size: 22px; font-weight: 700; color: #2c7a7b;
+    cursor: pointer; padding: 4px 10px; border-radius: 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+    transition: background 0.15s;
+  }
+  .sv-rate-display:hover { background: rgba(44,122,123,0.1); }
+  .sv-rate-display .pct { font-size: 16px; opacity: 0.7; }
+  .sv-rate-display.zero { color: #a0aec0; }
+  .sv-rate-edit-input {
+    font-size: 20px; font-weight: 700; color: #2c7a7b;
+    border: 2px solid #2c7a7b; border-radius: 6px; padding: 2px 8px;
+    width: 100px; font-family: inherit; text-align: center;
+  }
+  .sv-rate-monthly { font-size: 12px; color: #718096; margin-top: 4px; }
+  .sv-col-actions {
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 140px;
+  }
+  .sv-col-actions button {
+    padding: 8px 14px; border-radius: 7px; cursor: pointer;
+    font-size: 13px; font-weight: 600; font-family: inherit;
+    border: 1px solid transparent; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .sv-col-actions .deposit { background: #48bb78; color: white; }
+  .sv-col-actions .deposit:hover { background: #38a169; }
+  .sv-col-actions .withdraw { background: #fed7d7; color: #c53030; }
+  .sv-col-actions .withdraw:hover { background: #feb2b2; }
+  .sv-col-actions .more {
+    background: white; color: #4a5568; border-color: #e2e8f0;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .sv-col-actions .more:hover { background: #f7fafc; }
+  .sv-corner-actions {
+    position: absolute; top: 12px; left: 14px;
+    display: flex; gap: 4px;
+  }
+  .sv-corner-actions button {
+    background: rgba(255,255,255,0.8); border: 1px solid #e2e8f0;
+    width: 28px; height: 28px; border-radius: 6px;
+    cursor: pointer; font-size: 13px; padding: 0;
+    transition: all 0.15s;
+  }
+  .sv-corner-actions button:hover { background: white; }
+  .sv-corner-actions button.delete:hover { background: #fed7d7; border-color: #fc8181; }
+  .pension-card {
+    border: 1px solid #fed7aa;
+    border-radius: 14px;
+    padding: 22px 24px;
+    background: linear-gradient(135deg, #fef5e7 0%, #ffffff 80%);
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s;
+  }
+  .pension-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+  .pension-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #fed7aa;
+  }
+  .pension-header h3 { font-size: 22px; color: #c05621; display: flex; align-items: center; gap: 8px; }
+  .pension-header .pension-edit-btn {
+    background: #ed8936; color: white; border: none;
+    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; font-family: inherit;
+  }
+  .pension-header .pension-edit-btn:hover { background: #dd6b20; }
+  .pension-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .pension-stat {
+    background: white;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .pension-stat .label { font-size: 11px; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .pension-stat .value { font-size: 20px; font-weight: 700; color: #c05621; }
+  .pension-details {
+    background: rgba(255,255,255,0.6);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #4a5568;
+    line-height: 1.8;
+    margin-bottom: 14px;
+  }
+  .pension-details strong { color: #2d3748; }
+  .pension-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pension-actions button {
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .pension-actions .deposit { background: #ed8936; color: white; }
+  .pension-actions .deposit:hover { background: #dd6b20; }
+  .pension-actions .more { background: white; color: #4a5568; border-color: #e2e8f0; }
+  .pension-actions .more:hover { background: #f7fafc; }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .form-section-title { font-size: 14px; color: #c05621; margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #fed7aa; font-weight: 700; }
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  }
+  .panel h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #2d3748;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f7fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel h2 .panel-actions { display: flex; gap: 8px; }
+  .panel h2 button.mini {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    color: #4a5568;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+  .amount-row {
+    display: grid;
+    grid-template-columns: 1fr 100px;
+    gap: 8px;
+  }
+  .type-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .type-toggle button {
+    padding: 10px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .type-toggle button.active.income {
+    background: #48bb78;
+    color: white;
+    border-color: #48bb78;
+  }
+  .type-toggle button.active.expense {
+    background: #f56565;
+    color: white;
+    border-color: #f56565;
+  }
+  .options-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .option-toggle {
+    padding: 10px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-family: inherit;
+    text-align: center;
+  }
+  .option-toggle.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+  }
+  .conditional { display: none; }
+  .conditional.active { display: block; }
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+  }
+  .transactions-list {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  .transaction {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #f7fafc;
+    transition: background 0.2s;
+    gap: 10px;
+  }
+  .transaction:hover { background: #f7fafc; }
+  .transaction-info { flex: 1; min-width: 0; }
+  .transaction-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .transaction-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #edf2f7;
+    color: #4a5568;
+    font-weight: 500;
+  }
+  .transaction-badge.recurring { background: #e6fffa; color: #2c7a7b; }
+  .transaction-badge.installment { background: #fef5e7; color: #c05621; }
+  .transaction-badge.usd { background: #ebf8ff; color: #2c5282; }
+  .transaction-meta {
+    font-size: 12px;
+    color: #a0aec0;
+  }
+  .transaction-amount {
+    font-weight: 700;
+    font-size: 16px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .transaction-amount.income { color: #48bb78; }
+  .transaction-amount.expense { color: #f56565; }
+  .transaction-amount .original {
+    display: block;
+    font-size: 11px;
+    color: #a0aec0;
+    font-weight: 500;
+  }
+  .delete-btn {
+    background: none;
+    border: none;
+    color: #cbd5e0;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .delete-btn:hover { color: #f56565; background: #fff5f5; }
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #a0aec0;
+  }
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) {
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+  .chart-container {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  }
+  .chart-container h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #2d3748;
+  }
+  .chart-wrapper { position: relative; height: 300px; }
+  .budget-section, .recurring-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+  }
+  .budget-section h2, .recurring-section h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .budget-section h2 button, .recurring-section h2 button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .budget-item { margin-bottom: 14px; }
+  .budget-item-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .budget-item-name { font-weight: 600; }
+  .budget-item-values { color: #718096; }
+  .progress-bar {
+    height: 10px;
+    background: #f7fafc;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.3s;
+  }
+  .progress-fill.ok { background: linear-gradient(90deg, #48bb78, #38a169); }
+  .progress-fill.warning { background: linear-gradient(90deg, #ed8936, #dd6b20); }
+  .progress-fill.danger { background: linear-gradient(90deg, #f56565, #e53e3e); }
+  .recurring-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .recurring-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    background: #f7fafc;
+    position: relative;
+  }
+  .recurring-card .rec-title { font-weight: 600; margin-bottom: 4px; }
+  .recurring-card .rec-meta { font-size: 12px; color: #718096; margin-bottom: 6px; }
+  .recurring-card .rec-amount { font-size: 18px; font-weight: 700; color: #2c7a7b; }
+  .recurring-card .rec-actions {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: flex;
+    gap: 4px;
+  }
+  .recurring-card .rec-actions button {
+    background: white;
+    border: 1px solid #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .recurring-card.paused { opacity: 0.5; }
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f7fafc;
+    padding-bottom: 12px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .btn-secondary {
+    flex: 1;
+    padding: 12px;
+    background: #f7fafc;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-secondary:hover { background: #edf2f7; }
+  .actions-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .actions-bar button {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .actions-bar button:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+  }
+  .filter-select {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: white;
+  }
+  .info-note {
+    background: #ebf8ff;
+    color: #2c5282;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #f7fafc; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-left">
+      <h1>קושקושונים אימפריה</h1>
+      <div class="updated-stamp">עודכן: 17/05/2026 בשעה 20:06</div>
+    </div>
+    <div class="header-right">
+      <div class="rate-display" onclick="openRateModal()" title="לחצו לעדכון השערים">
+        <span class="rate-icon">💱</span>
+        <span id="rateDisplay">$ -- | € --</span>
+      </div>
+      <div class="month-selector">
+        <button onclick="changeMonth(-1)">‹</button>
+        <span id="currentMonth"></span>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="accounts-grid">
+    <div class="account-card checking">
+      <div class="account-header">
+        <div class="account-name">עובר ושב</div>
+        <div class="account-icon">🏦</div>
+      </div>
+      <div class="account-balance" id="checkingBalance">₪0</div>
+      <div class="account-sub" id="checkingSub">לחצו לעדכון יתרה</div>
+      <div class="account-actions">
+        <button onclick="openCheckingModal('deposit')">+ הפקדה</button>
+        <button onclick="openCheckingModal('withdraw')">− משיכה</button>
+        <button onclick="openCheckingModal('set')">⚙ עדכן</button>
+      </div>
+    </div>
+    <div class="account-card savings">
+      <div class="account-header">
+        <div class="account-name">חיסכון</div>
+        <div class="account-icon">💰</div>
+      </div>
+      <div class="account-balance" id="savingsBalance">₪0</div>
+      <div class="account-sub" id="savingsSub">0 חסכונות פעילים</div>
+      <div class="account-actions">
+        <button onclick="openSavingsAccountModal()">+ חיסכון חדש</button>
+        <button onclick="openHistory()">📋 היסטוריה</button>
+      </div>
+    </div>
+    <div class="account-card networth">
+      <div class="account-header">
+        <div class="account-name">שווי מעורך</div>
+        <div class="account-icon">📈</div>
+      </div>
+      <div class="account-balance" id="networthBalance">₪0</div>
+      <div class="account-sub" id="networthSub">סכום בזכות לאחר כל ההוצאות</div>
+      <div class="account-actions">
+        <button onclick="exportPDF()" style="background:rgba(255,255,255,0.3)">📄 ייצוא דוח PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card income">
+      <div class="label">סך הכנסות</div>
+      <div class="value" id="totalIncome">₪0</div>
+      <div class="sub" id="incomeCount">0 תנועות</div>
+    </div>
+    <div class="stat-card expense">
+      <div class="label">סך הוצאות</div>
+      <div class="value" id="totalExpense">₪0</div>
+      <div class="sub" id="expenseCount">0 תנועות</div>
+    </div>
+    <div class="stat-card balance">
+      <div class="label">מאזן חודשי</div>
+      <div class="value" id="balance">₪0</div>
+      <div class="sub" id="balanceLabel">חיסכון חודשי</div>
+    </div>
+    <div class="stat-card budget">
+      <div class="label">נותר מהתקציב</div>
+      <div class="value" id="budgetRemaining">₪0</div>
+      <div class="sub" id="budgetTotal">מתוך ₪0</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="panel">
+      <h2>הוספת תנועה</h2>
+      <div class="type-toggle">
+        <button type="button" id="btnExpense" class="active expense" onclick="setType('expense')">הוצאה</button>
+        <button type="button" id="btnIncome" onclick="setType('income')">הכנסה</button>
+      </div>
+
+      <div class="options-row">
+        <button type="button" class="option-toggle" id="optRecurring" onclick="toggleOption('recurring')">🔁 קבועה</button>
+        <button type="button" class="option-toggle" id="optInstallments" onclick="toggleOption('installments')">💳 לתשלומים</button>
+      </div>
+
+      <form id="transactionForm" onsubmit="addTransaction(event)">
+        <div class="form-group">
+          <label id="amountLabel">סכום</label>
+          <div class="amount-row">
+            <input type="number" id="amount" step="0.01" min="0" required>
+            <select id="currency" onchange="updateAmountLabel()">
+              <option value="ILS">₪ ש"ח</option>
+              <option value="USD">$ דולר</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>קטגוריה</label>
+          <select id="category" required></select>
+        </div>
+        <div class="form-group">
+          <label>תיאור</label>
+          <input type="text" id="description" placeholder="לדוגמה: סופרמרקט שופרסל">
+        </div>
+
+        <div class="conditional" id="installmentsBlock">
+          <div class="info-note">הזינו את הסכום הכולל של הרכישה ומספר התשלומים. המערכת תפצל אוטומטית לתשלומים חודשיים.</div>
+          <div class="form-group">
+            <label>מספר תשלומים</label>
+            <input type="number" id="installmentsCount" min="2" max="60" value="3">
+          </div>
+        </div>
+
+        <div class="conditional" id="recurringBlock">
+          <div class="info-note">תנועה זו תופיע אוטומטית בכל חודש החל מהתאריך שתבחרו.</div>
+          <div class="form-group">
+            <label>סיום אוטומטי (אופציונלי)</label>
+            <input type="date" id="recurringEnd">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label id="dateLabel">תאריך</label>
+          <input type="date" id="date" required>
+        </div>
+
+        <button type="submit" class="btn-primary">+ הוסף תנועה</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>רשימת תנועות</h2>
+      <div class="actions-bar">
+        <select class="filter-select" id="filterType" onchange="renderTransactions()">
+          <option value="all">כל הסוגים</option>
+          <option value="income">הכנסות בלבד</option>
+          <option value="expense">הוצאות בלבד</option>
+        </select>
+        <select class="filter-select" id="filterCategory" onchange="renderTransactions()">
+          <option value="all">כל הקטגוריות</option>
+        </select>
+        <button onclick="exportData()">ייצוא נתונים</button>
+        <button onclick="document.getElementById('importFile').click()">ייבוא נתונים</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+      <div class="transactions-list" id="transactionsList"></div>
+    </div>
+  </div>
+
+  <div class="recurring-section">
+    <h2>
+      <span>תשלומים קבועים (הוראות קבע)</span>
+      <span id="recurringCount" style="font-size:13px;color:#718096;font-weight:normal">0 פעילים</span>
+    </h2>
+    <div id="recurringList"></div>
+  </div>
+
+  <div class="recurring-section">
+    <h2>
+      <span>חסכונות (ניהול)</span>
+      <button onclick="openSavingsAccountModal()">+ חיסכון חדש</button>
+    </h2>
+    <div class="savings-grid" id="savingsGrid"></div>
+  </div>
+
+  <div class="recurring-section">
+    <h2>
+      <span>פנסיות 🏛️</span>
+      <button onclick="openPensionModal()">+ פנסיה חדשה</button>
+    </h2>
+    <div id="pensionsList"></div>
+  </div>
+
+  <div class="budget-section">
+    <h2>
+      <span>תקציב חודשי לפי קטגוריה</span>
+      <button onclick="openBudgetModal()">ערוך תקציב</button>
+    </h2>
+    <div id="budgetList"></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-container">
+      <h2>הוצאות לפי קטגוריה</h2>
+      <div class="chart-wrapper">
+        <canvas id="categoryChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h2>תקציב מול ביצוע</h2>
+      <div class="chart-wrapper">
+        <canvas id="budgetChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-container" style="margin-bottom:24px">
+    <h2>מגמת הכנסות והוצאות (6 חודשים אחרונים)</h2>
+    <div class="chart-wrapper" style="height:350px">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="budgetModal">
+  <div class="modal-content">
+    <h2>הגדרת תקציב חודשי</h2>
+    <div id="budgetInputs"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeBudgetModal()">ביטול</button>
+      <button class="btn-primary" onclick="saveBudget()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="checkingModal">
+  <div class="modal-content">
+    <h2 id="checkingModalTitle">פעולה בעובר ושב</h2>
+    <div class="info-note" id="checkingModalNote"></div>
+    <div class="form-group">
+      <label id="checkingModalLabel">סכום (₪)</label>
+      <input type="number" id="checkingAmount" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label>תיאור (אופציונלי)</label>
+      <input type="text" id="checkingDesc" placeholder="למשל: משיכת מזומן, התאמה לבנק">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModalById('checkingModal')">ביטול</button>
+      <button class="btn-primary" onclick="saveCheckingAction()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="savingsModal">
+  <div class="modal-content">
+    <h2 id="savingsModalTitle">הפקדה לחיסכון</h2>
+    <div class="form-group">
+      <label>חיסכון</label>
+      <select id="savingsSelect"></select>
+    </div>
+    <div class="form-group">
+      <label>סכום (₪)</label>
+      <input type="number" id="savingsAmount" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label>תיאור (אופציונלי)</label>
+      <input type="text" id="savingsDesc" placeholder="למשל: הפקדה חודשית">
+    </div>
+    <div class="form-group">
+      <label class="checkbox-row">
+        <input type="checkbox" id="savingsAffectChecking" checked>
+        <span id="savingsAffectLabel">להפחית את הסכום מיתרת עו"ש</span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModalById('savingsModal')">ביטול</button>
+      <button class="btn-primary" onclick="saveSavingsAction()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="savingsAccountModal">
+  <div class="modal-content">
+    <h2 id="savingsAccountTitle">חיסכון חדש</h2>
+    <div class="form-group">
+      <label>שם החיסכון</label>
+      <input type="text" id="svAccName" placeholder="למשל: חיסכון לחתונה, קרן השתלמות">
+    </div>
+    <div class="form-group">
+      <label>מטבע החיסכון</label>
+      <select id="svAccCurrency" onchange="updateSvBalanceLabel()">
+        <option value="ILS">₪ שקל</option>
+        <option value="USD">$ דולר</option>
+        <option value="EUR">€ יורו</option>
+        <option value="GBP">£ ליש"ט</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label id="svAccBalanceLabel">יתרת פתיחה (₪)</label>
+      <input type="number" id="svAccBalance" step="0.01" placeholder="0" value="0">
+      <div id="svAccBalanceHint" style="font-size:11px;color:#a0aec0;margin-top:4px"></div>
+    </div>
+    <div class="form-group">
+      <label>סוג תשואה</label>
+      <select id="svAccReturnType" onchange="updateRateLabel()">
+        <option value="annual">תשואה שנתית מהצבירה (חישוב חודשי)</option>
+        <option value="on-deposit">תשואה כאחוז מההפקדה (בונוס חד פעמי על כל הפקדה)</option>
+      </select>
+      <div style="font-size:11px;color:#a0aec0;margin-top:4px" id="returnTypeHint">תשואה שנתית מצטברת על היתרה הקיימת</div>
+    </div>
+    <div class="form-group">
+      <label id="svAccRateLabel">אחוז תשואה שנתי (%)</label>
+      <input type="number" id="svAccRate" step="0.01" placeholder="לדוגמה: 5" value="0">
+    </div>
+    <div class="form-group">
+      <label class="checkbox-row">
+        <input type="checkbox" id="svAccHasRecurring" onchange="toggleRecurringBlock()">
+        <span>הוראת קבע - הפקדה חודשית אוטומטית</span>
+      </label>
+    </div>
+    <div id="svAccRecurringBlock" style="display:none;border-right:3px solid #ed8936;padding-right:12px;margin-bottom:14px">
+      <div class="form-group">
+        <label>סכום הוראת הקבע (₪)</label>
+        <input type="number" id="svAccRecAmount" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>יום בחודש להפקדה</label>
+        <input type="number" id="svAccRecDay" min="1" max="31" value="1">
+      </div>
+      <div class="form-group">
+        <label>החל מחודש (תאריך התחלה)</label>
+        <input type="date" id="svAccRecStart">
+      </div>
+      <div class="form-group">
+        <label class="checkbox-row">
+          <input type="checkbox" id="svAccRecAffectChecking" checked>
+          <span>לנכות את ההפקדה מיתרת עו"ש (העברה בנקאית)</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModalById('savingsAccountModal')">ביטול</button>
+      <button class="btn-secondary" id="svAccDeleteBtn" style="display:none;background:#fed7d7;color:#c53030;border-color:#fed7d7" onclick="deleteSavingsAccount()">מחק חיסכון</button>
+      <button class="btn-primary" onclick="saveSavingsAccount()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="pensionModal">
+  <div class="modal-content" style="max-width:620px">
+    <h2 id="pensionModalTitle">עריכת פנסיה</h2>
+    <div class="form-section-title">פרטים כלליים</div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>שם / בעל הפנסיה</label>
+        <input type="text" id="pName" placeholder="לדוגמה: רום, גל">
+      </div>
+      <div class="form-group">
+        <label>שם קופת הפנסיה</label>
+        <input type="text" id="pFundName" placeholder="מנורה / הראל / מגדל וכו'">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>צבירה נוכחית (₪)</label>
+        <input type="number" id="pBalance" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>שכר חודשי ברוטו (₪)</label>
+        <input type="number" id="pSalary" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>תשואה שנתית צפויה (%)</label>
+        <input type="number" id="pReturn" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>מסלול השקעה</label>
+        <input type="text" id="pTrack" placeholder="כללי / מנייתי / סולידי">
+      </div>
+    </div>
+
+    <div class="form-section-title">אחוזי הפקדה מהשכר</div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label>עובד (%)</label>
+        <input type="number" id="pEmployeePct" step="0.01" value="6">
+      </div>
+      <div class="form-group">
+        <label>מעביד (%)</label>
+        <input type="number" id="pEmployerPct" step="0.01" value="6.5">
+      </div>
+      <div class="form-group">
+        <label>פיצויים (%)</label>
+        <input type="number" id="pSeverancePct" step="0.01" value="8.33">
+      </div>
+    </div>
+
+    <div class="form-section-title">דמי ניהול</div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>מצבירה - שנתי (%)</label>
+        <input type="number" id="pFeeAcc" step="0.01" value="0.5">
+      </div>
+      <div class="form-group">
+        <label>מהפקדה (%)</label>
+        <input type="number" id="pFeeDep" step="0.01" value="1.0">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>תאריך תחילת חברות (אופציונלי)</label>
+      <input type="date" id="pStartDate">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModalById('pensionModal')">ביטול</button>
+      <button class="btn-secondary" id="pDeleteBtn" style="display:none;background:#fed7d7;color:#c53030;border-color:#fed7d7" onclick="deletePension()">מחק פנסיה</button>
+      <button class="btn-primary" onclick="savePension()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="pensionDepositModal">
+  <div class="modal-content">
+    <h2>הפקדה ידנית לפנסיה</h2>
+    <div class="form-group">
+      <label>סכום (₪)</label>
+      <input type="number" id="pDepAmount" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label>תיאור (אופציונלי)</label>
+      <input type="text" id="pDepDesc" placeholder="לדוגמה: בונוס שנתי, השלמת חיסכון">
+    </div>
+    <div class="form-group">
+      <label>תאריך</label>
+      <input type="date" id="pDepDate">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModalById('pensionDepositModal')">ביטול</button>
+      <button class="btn-primary" onclick="savePensionDeposit()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="historyModal">
+  <div class="modal-content">
+    <h2>היסטוריית חיסכון ועו"ש</h2>
+    <div style="margin-bottom:12px">
+      <select class="filter-select" id="historyFilter" onchange="renderHistoryModal()">
+        <option value="all">הכל</option>
+        <option value="savings">חיסכון בלבד</option>
+        <option value="checking">עו"ש בלבד</option>
+      </select>
+    </div>
+    <div class="history-list" id="historyListContent"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModalById('historyModal')">סגור</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="rateModal">
+  <div class="modal-content">
+    <h2>שער דולר/שקל</h2>
+    <div class="info-note">המערכת מנסה למשוך את השער האחרון אוטומטית. ניתן להזין שערים ידניים (שערים יציגים של בנק ישראל) או ללחוץ על "רענן" כדי למשוך מחדש.</div>
+    <div class="form-group">
+      <label>1$ = כמה ₪ (דולר)</label>
+      <input type="number" id="rateInput" step="0.0001" min="0">
+    </div>
+    <div class="form-group">
+      <label>1€ = כמה ₪ (יורו)</label>
+      <input type="number" id="rateInputEur" step="0.0001" min="0">
+    </div>
+    <div class="form-group">
+      <label>1£ = כמה ₪ (ליש"ט)</label>
+      <input type="number" id="rateInputGbp" step="0.0001" min="0">
+    </div>
+    <div class="form-group">
+      <label id="rateUpdatedLabel" style="color:#718096;font-size:12px"></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeRateModal()">סגור</button>
+      <button class="btn-secondary" onclick="fetchExchangeRate(true)">רענן מהאינטרנט</button>
+      <button class="btn-primary" onclick="saveManualRate()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const EXPENSE_CATEGORIES = ['מזון וסופר', 'דיור (שכ"ד/משכנתא)', 'חשבונות (חשמל/מים/ארנונה)', 'תקשורת', 'תחבורה ודלק', 'בריאות', 'חינוך', 'בילויים ופנאי', 'ביגוד', 'מתנות', 'חיסכון והשקעות', 'ביטוחים', 'אחר'];
+const INCOME_CATEGORIES = ['משכורת', 'עסק עצמאי', 'בונוס', 'מתנה', 'החזרי מס', 'דיבידנדים/ריבית', 'אחר'];
+
+let transactions = JSON.parse(localStorage.getItem('fm_transactions') || '[]');
+let budgets = JSON.parse(localStorage.getItem('fm_budgets') || '{}');
+let recurringRules = JSON.parse(localStorage.getItem('fm_recurring') || '[]');
+let exchangeRate = JSON.parse(localStorage.getItem('fm_rate') || 'null') || { rate: 3.7, updatedAt: null, source: 'default' };
+if (!exchangeRate.rates) {
+  exchangeRate.rates = { USD: exchangeRate.rate || 3.7, EUR: 4.0, GBP: 4.7 };
+}
+// Keep .rate in sync with USD for backward compat
+exchangeRate.rate = exchangeRate.rates.USD;
+const CURRENCIES = {
+  'ILS': { symbol: '₪', name: 'ש"ח' },
+  'USD': { symbol: '$', name: 'דולר' },
+  'EUR': { symbol: '€', name: 'יורו' },
+  'GBP': { symbol: '£', name: 'לירה שטרלינג' }
+};
+function getRate(c) { if (c === 'ILS' || !c) return 1; return (exchangeRate.rates && exchangeRate.rates[c]) || 1; }
+function curSymbol(c) { return (CURRENCIES[c] || {symbol:'?'}).symbol; }
+function fmtCur(amount, currency) {
+  const sym = curSymbol(currency || 'ILS');
+  return sym + Number(amount).toLocaleString('he-IL', {maximumFractionDigits: 2});
+}
+let accounts = JSON.parse(localStorage.getItem('fm_accounts') || 'null') || {
+  checking: { initialBalance: 0, history: [] },
+  savings: []
+};
+// Migrate old savings (object with history) into array of savings accounts
+if (accounts.savings && !Array.isArray(accounts.savings)) {
+  const oldHist = accounts.savings.history || [];
+  accounts.savings = oldHist.length ? [{
+    id: 'sv-default', name: 'חיסכון כללי', annualReturnPct: 0,
+    history: oldHist, recurring: null, lastReturnMonth: null, createdAt: new Date().toISOString()
+  }] : [];
+}
+if (!accounts.savings) accounts.savings = [];
+
+if (!accounts.pensions) {
+  accounts.pensions = [
+    { id: 'pension-rom', name: 'רום', fundName: '', monthlySalary: 0, employeePct: 6, employerPct: 6.5, severancePct: 8.33, feeOnAccumulation: 0.5, feeOnDeposit: 1.0, annualReturnPct: 6, track: 'כללי', startDate: null, history: [], lastUpdateMonth: null, createdAt: new Date().toISOString() },
+    { id: 'pension-gal', name: 'גל', fundName: '', monthlySalary: 0, employeePct: 6, employerPct: 6.5, severancePct: 8.33, feeOnAccumulation: 0.5, feeOnDeposit: 1.0, annualReturnPct: 6, track: 'כללי', startDate: null, history: [], lastUpdateMonth: null, createdAt: new Date().toISOString() }
+  ];
+}
+
+let currentDate = new Date();
+let currentType = 'expense';
+let optRecurring = false;
+let optInstallments = false;
+let charts = {};
+
+function fmt(n) {
+  return '₪' + Number(n).toLocaleString('he-IL', {maximumFractionDigits: 2});
+}
+function fmtUsd(n) {
+  return '$' + Number(n).toLocaleString('en-US', {maximumFractionDigits: 2});
+}
+
+function monthKey(date) {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+}
+function getCurrentMonthKey() { return monthKey(currentDate); }
+
+function changeMonth(delta) {
+  currentDate.setMonth(currentDate.getMonth() + delta);
+  materializeRecurring();
+  render();
+}
+
+function setType(type) {
+  currentType = type;
+  document.getElementById('btnExpense').classList.toggle('active', type === 'expense');
+  document.getElementById('btnIncome').classList.toggle('active', type === 'income');
+  document.getElementById('btnExpense').classList.toggle('expense', type === 'expense');
+  document.getElementById('btnIncome').classList.toggle('income', type === 'income');
+  populateCategorySelect();
+}
+
+function toggleOption(opt) {
+  if (opt === 'recurring') {
+    optRecurring = !optRecurring;
+    if (optRecurring) optInstallments = false;
+  } else {
+    optInstallments = !optInstallments;
+    if (optInstallments) optRecurring = false;
+  }
+  document.getElementById('optRecurring').classList.toggle('active', optRecurring);
+  document.getElementById('optInstallments').classList.toggle('active', optInstallments);
+  document.getElementById('recurringBlock').classList.toggle('active', optRecurring);
+  document.getElementById('installmentsBlock').classList.toggle('active', optInstallments);
+  updateAmountLabel();
+}
+
+function updateAmountLabel() {
+  const cur = document.getElementById('currency').value;
+  const sym = cur === 'USD' ? '$' : '₪';
+  let label = 'סכום (' + sym + ')';
+  if (optInstallments) label = 'סכום כולל של הרכישה (' + sym + ')';
+  document.getElementById('amountLabel').textContent = label;
+  document.getElementById('dateLabel').textContent = optInstallments ? 'תאריך תשלום ראשון' : optRecurring ? 'תאריך התשלום הראשון' : 'תאריך';
+}
+
+function populateCategorySelect() {
+  const select = document.getElementById('category');
+  const cats = currentType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  select.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function populateFilterCategories() {
+  const select = document.getElementById('filterCategory');
+  const cats = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+  const current = select.value;
+  select.innerHTML = '<option value="all">כל הקטגוריות</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  select.value = current || 'all';
+}
+
+function toIls(amount, currency, rate) {
+  if (currency === 'USD') return amount * (rate || exchangeRate.rate);
+  return amount;
+}
+
+function addTransaction(e) {
+  e.preventDefault();
+  const amount = parseFloat(document.getElementById('amount').value);
+  const currency = document.getElementById('currency').value;
+  const category = document.getElementById('category').value;
+  const description = document.getElementById('description').value;
+  const date = document.getElementById('date').value;
+  const rateAtEntry = exchangeRate.rate;
+
+  if (optRecurring) {
+    const rule = {
+      id: 'r' + Date.now(),
+      type: currentType,
+      originalAmount: amount,
+      currency: currency,
+      category: category,
+      description: description,
+      startDate: date,
+      endDate: document.getElementById('recurringEnd').value || null,
+      active: true,
+      createdAt: new Date().toISOString()
+    };
+    recurringRules.push(rule);
+    save();
+    materializeRecurring();
+  } else if (optInstallments) {
+    const count = parseInt(document.getElementById('installmentsCount').value) || 2;
+    const installmentAmount = amount / count;
+    const groupId = 'i' + Date.now();
+    const startD = new Date(date);
+    for (let i = 0; i < count; i++) {
+      const d = new Date(startD.getFullYear(), startD.getMonth() + i, startD.getDate());
+      const isoDate = d.toISOString().slice(0, 10);
+      const tx = {
+        id: Date.now() + Math.random() + i,
+        type: currentType,
+        amount: toIls(installmentAmount, currency, rateAtEntry),
+        originalAmount: installmentAmount,
+        currency: currency,
+        rate: currency === 'USD' ? rateAtEntry : null,
+        category: category,
+        description: description,
+        date: isoDate,
+        installment: { groupId, number: i + 1, total: count, totalAmount: amount }
+      };
+      transactions.push(tx);
+    }
+    save();
+  } else {
+    const tx = {
+      id: Date.now() + Math.random(),
+      type: currentType,
+      amount: toIls(amount, currency, rateAtEntry),
+      originalAmount: amount,
+      currency: currency,
+      rate: currency === 'USD' ? rateAtEntry : null,
+      category: category,
+      description: description,
+      date: date
+    };
+    transactions.push(tx);
+    save();
+  }
+
+  document.getElementById('transactionForm').reset();
+  document.getElementById('date').valueAsDate = new Date();
+  document.getElementById('currency').value = 'ILS';
+  optRecurring = false; optInstallments = false;
+  document.getElementById('optRecurring').classList.remove('active');
+  document.getElementById('optInstallments').classList.remove('active');
+  document.getElementById('recurringBlock').classList.remove('active');
+  document.getElementById('installmentsBlock').classList.remove('active');
+  updateAmountLabel();
+  render();
+}
+
+function deleteTransaction(id) {
+  const tx = transactions.find(t => t.id === id);
+  if (!tx) return;
+  if (tx.installment) {
+    if (confirm('זהו תשלום ' + tx.installment.number + ' מתוך ' + tx.installment.total + '. למחוק את כל סדרת התשלומים? (ביטול = רק את התשלום הזה)')) {
+      transactions = transactions.filter(t => !(t.installment && t.installment.groupId === tx.installment.groupId));
+    } else {
+      transactions = transactions.filter(t => t.id !== id);
+    }
+  } else if (tx.recurringId) {
+    if (confirm('זוהי תנועה שנוצרה מהוראת קבע. למחוק רק תנועה זו? (ביטול = למחוק גם את ההוראה הקבועה)')) {
+      transactions = transactions.filter(t => t.id !== id);
+    } else {
+      const rid = tx.recurringId;
+      transactions = transactions.filter(t => t.recurringId !== rid);
+      recurringRules = recurringRules.filter(r => r.id !== rid);
+    }
+  } else {
+    if (!confirm('האם למחוק את התנועה?')) return;
+    transactions = transactions.filter(t => t.id !== id);
+  }
+  save();
+  render();
+}
+
+function toggleRecurring(id) {
+  const r = recurringRules.find(x => x.id === id);
+  if (!r) return;
+  r.active = !r.active;
+  save();
+  materializeRecurring();
+  render();
+}
+
+function deleteRecurring(id) {
+  if (!confirm('למחוק הוראת קבע זו? (תנועות שכבר נוצרו יישארו)')) return;
+  recurringRules = recurringRules.filter(r => r.id !== id);
+  save();
+  render();
+}
+
+function save() {
+  localStorage.setItem('fm_transactions', JSON.stringify(transactions));
+  localStorage.setItem('fm_budgets', JSON.stringify(budgets));
+  localStorage.setItem('fm_recurring', JSON.stringify(recurringRules));
+  localStorage.setItem('fm_rate', JSON.stringify(exchangeRate));
+  localStorage.setItem('fm_accounts', JSON.stringify(accounts));
+}
+
+function calcCheckingBalance() {
+  let bal = accounts.checking.initialBalance || 0;
+  transactions.forEach(t => {
+    if (t.type === 'income') bal += t.amount;
+    else bal -= t.amount;
+  });
+  (accounts.checking.history || []).forEach(h => {
+    if (h.type === 'deposit') bal += h.amount;
+    else if (h.type === 'withdraw') bal -= h.amount;
+    else if (h.type === 'set-adjustment') bal += h.amount;
+    else if (h.type === 'savings-transfer-out') bal -= h.amount;
+    else if (h.type === 'savings-transfer-in') bal += h.amount;
+  });
+  return bal;
+}
+
+function calcSavingsBalanceFor(s) {
+  return (s.history || []).reduce((bal, h) => {
+    if (h.type === 'deposit' || h.type === 'return') return bal + h.amount;
+    if (h.type === 'withdraw') return bal - h.amount;
+    return bal;
+  }, 0);
+}
+
+function calcSavingsBalanceForInIls(s) {
+  return calcSavingsBalanceFor(s) * getRate(s.currency || 'ILS');
+}
+function calcSavingsBalance() {
+  return accounts.savings.reduce((s, sv) => s + calcSavingsBalanceForInIls(sv), 0);
+}
+
+function projectedMonthlyReturn(s) {
+  if (s.returnType === 'on-deposit') return 0;
+  return calcSavingsBalanceFor(s) * ((s.annualReturnPct || 0) / 12 / 100);
+}
+
+function applyMonthlyReturns() {
+  const now = new Date();
+  const curKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  accounts.savings.forEach(s => {
+    if (s.returnType === 'on-deposit') { s.lastReturnMonth = curKey; return; }
+    if (!s.annualReturnPct || s.annualReturnPct <= 0) { s.lastReturnMonth = curKey; return; }
+    if (!s.lastReturnMonth) { s.lastReturnMonth = curKey; return; }
+    let [ly, lm] = s.lastReturnMonth.split('-').map(Number);
+    let cursor = new Date(ly, lm - 1, 1);
+    let safety = 0;
+    while (safety++ < 240) {
+      cursor.setMonth(cursor.getMonth() + 1);
+      const k = cursor.getFullYear() + '-' + String(cursor.getMonth() + 1).padStart(2, '0');
+      if (k >= curKey) break;
+      const bal = calcSavingsBalanceFor(s);
+      if (bal > 0) {
+        const ret = bal * (s.annualReturnPct / 12 / 100);
+        s.history.push({
+          id: 'r' + Date.now() + Math.random(),
+          type: 'return', amount: ret,
+          date: new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).toISOString().slice(0, 10),
+          description: 'תשואה חודשית (' + s.annualReturnPct + '% שנתי)'
+        });
+      }
+      s.lastReturnMonth = k;
+    }
+  });
+}
+
+function materializeSavingsRecurring() {
+  const now = new Date();
+  const curKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  accounts.savings.forEach(s => {
+    if (!s.recurring || !s.recurring.active) return;
+    const r = s.recurring;
+    if (!r.startDate) r.startDate = new Date().toISOString().slice(0, 10);
+    let [sy, sm] = r.startDate.slice(0, 7).split('-').map(Number);
+    let cursor = new Date(sy, sm - 1, 1);
+    let safety = 0;
+    while (safety++ < 240) {
+      const k = cursor.getFullYear() + '-' + String(cursor.getMonth() + 1).padStart(2, '0');
+      if (k > curKey) break;
+      const day = Math.min(r.dayOfMonth || 1, new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate());
+      const isoDate = cursor.getFullYear() + '-' + String(cursor.getMonth() + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+      const exists = (s.history || []).some(h => h.recurringSource === s.id + '-' + k);
+      if (!exists) {
+        s.history.push({
+          id: 'd' + Date.now() + Math.random(),
+          type: 'deposit', amount: r.amount, date: isoDate,
+          description: 'הפקדה קבועה',
+          recurringSource: s.id + '-' + k
+        });
+        if (s.returnType === 'on-deposit' && (s.annualReturnPct || 0) > 0) {
+          s.history.push({
+            id: 'd' + Date.now() + Math.random() + 1,
+            type: 'return', amount: r.amount * s.annualReturnPct / 100,
+            date: isoDate,
+            description: 'בונוס תשואה מההפקדה (' + s.annualReturnPct + '%)'
+          });
+        }
+        if (r.affectChecking) {
+          const ilsAmount = r.amount * getRate(s.currency || 'ILS');
+          accounts.checking.history = accounts.checking.history || [];
+          accounts.checking.history.push({
+            id: 'c' + Date.now() + Math.random(),
+            date: isoDate, type: 'savings-transfer-out', amount: ilsAmount,
+            description: 'הוראת קבע לחיסכון: ' + s.name + ((s.currency && s.currency !== 'ILS') ? ' (' + fmtCur(r.amount, s.currency) + ')' : '')
+          });
+        }
+      }
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  });
+}
+
+function calcNetWorth() { return calcCheckingBalance() + calcSavingsBalance() + calcTotalPensions(); }
+
+function renderAccounts() {
+  const ch = calcCheckingBalance();
+  const sv = calcSavingsBalance();
+  const nw = ch + sv;
+  document.getElementById('checkingBalance').textContent = fmt(ch);
+  document.getElementById('savingsBalance').textContent = fmt(sv);
+  document.getElementById('networthBalance').textContent = fmt(nw);
+
+  const activeCount = accounts.savings.length;
+  const withRet = accounts.savings.filter(s => s.annualReturnPct > 0).length;
+  document.getElementById('savingsSub').textContent = activeCount + ' חסכונות' + (withRet ? ' • ' + withRet + ' עם תשואה' : '');
+
+  const monthTx = getMonthTransactions();
+  const monthInc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const monthExp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  document.getElementById('checkingSub').textContent = 'החודש: +' + fmt(monthInc) + ' / −' + fmt(monthExp);
+  const pn = calcTotalPensions();
+  const totalAll = ch + sv + pn;
+  document.getElementById('networthBalance').textContent = fmt(totalAll);
+  document.getElementById('networthSub').textContent = 'עו"ש: ' + fmt(ch) + ' • חיסכון: ' + fmt(sv) + ' • פנסיה: ' + fmt(pn);
+}
+
+let checkingAction = null;
+function openCheckingModal(action) {
+  checkingAction = action;
+  document.getElementById('checkingAmount').value = '';
+  document.getElementById('checkingDesc').value = '';
+  const titles = { deposit: 'הפקדה לעו"ש', withdraw: 'משיכה מעו"ש', set: 'עדכון יתרת עו"ש' };
+  const notes = {
+    deposit: 'הוספת סכום ליתרת עו"ש (למשל מזומן שהפקדתם)',
+    withdraw: 'הפחתת סכום מיתרת עו"ש (למשל משיכת מזומן)',
+    set: 'הזינו את היתרה הנוכחית בבנק. הפרש בין היתרה המחושבת לזו שתזינו יירשם כהתאמה.'
+  };
+  document.getElementById('checkingModalTitle').textContent = titles[action];
+  document.getElementById('checkingModalNote').textContent = notes[action];
+  document.getElementById('checkingModalLabel').textContent = action === 'set' ? 'יתרה חדשה (₪)' : 'סכום (₪)';
+  if (action === 'set') document.getElementById('checkingAmount').value = calcCheckingBalance().toFixed(2);
+  document.getElementById('checkingModal').classList.add('active');
+}
+
+function saveCheckingAction() {
+  const amount = parseFloat(document.getElementById('checkingAmount').value);
+  if (isNaN(amount)) { alert('הזינו סכום חוקי'); return; }
+  const desc = document.getElementById('checkingDesc').value;
+  const today = new Date().toISOString().slice(0, 10);
+  const entry = { id: 'c' + Date.now(), date: today, description: desc };
+  if (checkingAction === 'set') {
+    const current = calcCheckingBalance();
+    entry.type = 'set-adjustment';
+    entry.amount = amount - current;
+    entry.description = desc || `התאמת יתרה: ${fmt(current)} → ${fmt(amount)}`;
+  } else {
+    entry.type = checkingAction;
+    entry.amount = amount;
+  }
+  accounts.checking.history = accounts.checking.history || [];
+  accounts.checking.history.push(entry);
+  save();
+  closeModalById('checkingModal');
+  render();
+}
+
+let savingsAction = null;
+let savingsTargetId = null;
+function openSavingsModal(action, targetId) {
+  if (accounts.savings.length === 0) {
+    if (confirm('עדיין לא יצרת חיסכון. ליצור עכשיו?')) openSavingsAccountModal();
+    return;
+  }
+  savingsAction = action;
+  savingsTargetId = targetId || null;
+  document.getElementById('savingsAmount').value = '';
+  document.getElementById('savingsDesc').value = '';
+  document.getElementById('savingsAffectChecking').checked = true;
+  const sel = document.getElementById('savingsSelect');
+  sel.innerHTML = accounts.savings.map(s => `<option value="${s.id}">${s.name} (${fmtCur(calcSavingsBalanceFor(s), s.currency || 'ILS')})</option>`).join('');
+  if (targetId) sel.value = targetId;
+  const titles = { deposit: 'הפקדה לחיסכון', withdraw: 'משיכה מחיסכון' };
+  document.getElementById('savingsModalTitle').textContent = titles[action];
+  document.getElementById('savingsAffectLabel').textContent = action === 'deposit' ? 'להפחית את הסכום מיתרת עו"ש (העברה בנקאית)' : 'להוסיף את הסכום ליתרת עו"ש (משיכה לעו"ש)';
+  sel.onchange = () => updateSavingsModalCurrency();
+  updateSavingsModalCurrency();
+  document.getElementById('savingsModal').classList.add('active');
+}
+
+function updateSavingsModalCurrency() {
+  const svId = document.getElementById('savingsSelect').value;
+  const sv = accounts.savings.find(s => s.id === svId);
+  if (!sv) return;
+  const cur = sv.currency || 'ILS';
+  const sym = curSymbol(cur);
+  const amountInput = document.getElementById('savingsAmount');
+  const lbl = amountInput.previousElementSibling;
+  if (lbl) lbl.textContent = 'סכום (' + sym + ')';
+}
+
+function saveSavingsAction() {
+  const amount = parseFloat(document.getElementById('savingsAmount').value);
+  if (isNaN(amount) || amount <= 0) { alert('הזינו סכום חוקי'); return; }
+  const desc = document.getElementById('savingsDesc').value;
+  const affectChecking = document.getElementById('savingsAffectChecking').checked;
+  const svId = document.getElementById('savingsSelect').value;
+  const sv = accounts.savings.find(s => s.id === svId);
+  if (!sv) { alert('בחרו חיסכון'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  sv.history.push({
+    id: 'h' + Date.now() + Math.random(),
+    date: today, type: savingsAction, amount, description: desc || (savingsAction === 'deposit' ? 'הפקדה' : 'משיכה')
+  });
+  if (savingsAction === 'deposit' && sv.returnType === 'on-deposit' && (sv.annualReturnPct || 0) > 0) {
+    const bonus = amount * sv.annualReturnPct / 100;
+    sv.history.push({
+      id: 'h' + Date.now() + Math.random() + 1,
+      date: today, type: 'return', amount: bonus,
+      description: 'בונוס תשואה מההפקדה (' + sv.annualReturnPct + '%)'
+    });
+  }
+  if (affectChecking) {
+    const ilsAmount = amount * getRate(sv.currency || 'ILS');
+    accounts.checking.history = accounts.checking.history || [];
+    accounts.checking.history.push({
+      id: 'c' + Date.now(),
+      date: today,
+      type: savingsAction === 'deposit' ? 'savings-transfer-out' : 'savings-transfer-in',
+      amount: ilsAmount,
+      description: (savingsAction === 'deposit' ? 'העברה לחיסכון: ' : 'משיכה מחיסכון: ') + sv.name + ((sv.currency && sv.currency !== 'ILS') ? ' (' + fmtCur(amount, sv.currency) + ')' : '') + (desc ? ' - ' + desc : '')
+    });
+  }
+  save();
+  closeModalById('savingsModal');
+  render();
+}
+
+let editingSavingsId = null;
+function openSavingsAccountModal(id) {
+  editingSavingsId = id || null;
+  const titleEl = document.getElementById('savingsAccountTitle');
+  const delBtn = document.getElementById('svAccDeleteBtn');
+  document.getElementById('svAccRecStart').value = new Date().toISOString().slice(0, 10);
+  if (id) {
+    const s = accounts.savings.find(x => x.id === id);
+    if (!s) return;
+    titleEl.textContent = 'עריכת חיסכון: ' + s.name;
+    document.getElementById('svAccName').value = s.name;
+    document.getElementById('svAccCurrency').value = s.currency || 'ILS';
+    document.getElementById('svAccBalance').value = calcSavingsBalanceFor(s).toFixed(2);
+    document.getElementById('svAccBalance').disabled = false;
+    document.getElementById('svAccBalanceLabel').textContent = 'יתרה נוכחית (₪)';
+    document.getElementById('svAccBalanceHint').textContent = 'שינוי כאן יווסף כהתאמה להיסטוריה';
+    document.getElementById('svAccRate').value = s.annualReturnPct || 0;
+    document.getElementById('svAccReturnType').value = s.returnType || 'annual';
+    updateRateLabel();
+    const hasRec = !!(s.recurring && s.recurring.amount);
+    document.getElementById('svAccHasRecurring').checked = hasRec;
+    if (hasRec) {
+      document.getElementById('svAccRecAmount').value = s.recurring.amount;
+      document.getElementById('svAccRecDay').value = s.recurring.dayOfMonth || 1;
+      document.getElementById('svAccRecStart').value = s.recurring.startDate || new Date().toISOString().slice(0, 10);
+      document.getElementById('svAccRecAffectChecking').checked = s.recurring.affectChecking !== false;
+    }
+    toggleRecurringBlock();
+    delBtn.style.display = 'block';
+  } else {
+    titleEl.textContent = 'חיסכון חדש';
+    document.getElementById('svAccName').value = '';
+    document.getElementById('svAccCurrency').value = 'ILS';
+    document.getElementById('svAccBalance').value = '0';
+    document.getElementById('svAccBalance').disabled = false;
+    document.getElementById('svAccBalanceLabel').textContent = 'יתרת פתיחה (₪)';
+    document.getElementById('svAccBalanceHint').textContent = '';
+    document.getElementById('svAccRate').value = '0';
+    document.getElementById('svAccReturnType').value = 'annual';
+    updateRateLabel();
+    document.getElementById('svAccHasRecurring').checked = false;
+    document.getElementById('svAccRecAmount').value = '';
+    document.getElementById('svAccRecDay').value = '1';
+    document.getElementById('svAccRecAffectChecking').checked = true;
+    toggleRecurringBlock();
+    delBtn.style.display = 'none';
+  }
+  updateSvBalanceLabel();
+  document.getElementById('savingsAccountModal').classList.add('active');
+}
+
+function updateSvBalanceLabel() {
+  const c = document.getElementById('svAccCurrency').value;
+  const sym = curSymbol(c);
+  document.getElementById('svAccBalanceLabel').textContent = (editingSavingsId ? 'יתרה נוכחית' : 'יתרת פתיחה') + ' (' + sym + ')';
+  const recAmt = document.getElementById('svAccRecAmount');
+  if (recAmt && recAmt.previousElementSibling) recAmt.previousElementSibling.textContent = 'סכום הוראת הקבע (' + sym + ')';
+}
+
+function updateRateLabel() {
+  const t = document.getElementById('svAccReturnType').value;
+  const label = document.getElementById('svAccRateLabel');
+  const hint = document.getElementById('returnTypeHint');
+  if (t === 'on-deposit') {
+    label.textContent = 'אחוז תשואה מההפקדה (%)';
+    hint.textContent = 'בעת כל הפקדה לחיסכון, יווסף בונוס באחוז זה מהסכום שהופקד';
+  } else {
+    label.textContent = 'אחוז תשואה שנתי (%)';
+    hint.textContent = 'תשואה שנתית מצטברת על היתרה הקיימת (מחושבת חודש בחודשו)';
+  }
+}
+
+function toggleRecurringBlock() {
+  const checked = document.getElementById('svAccHasRecurring').checked;
+  document.getElementById('svAccRecurringBlock').style.display = checked ? 'block' : 'none';
+}
+
+function saveSavingsAccount() {
+  const name = document.getElementById('svAccName').value.trim();
+  if (!name) { alert('הזינו שם לחיסכון'); return; }
+  const rate = parseFloat(document.getElementById('svAccRate').value) || 0;
+  const returnType = document.getElementById('svAccReturnType').value || 'annual';
+  const currency = document.getElementById('svAccCurrency').value || 'ILS';
+  const hasRec = document.getElementById('svAccHasRecurring').checked;
+  let recurring = null;
+  if (hasRec) {
+    const ramt = parseFloat(document.getElementById('svAccRecAmount').value);
+    if (isNaN(ramt) || ramt <= 0) { alert('הזינו סכום הוראת קבע חוקי'); return; }
+    recurring = {
+      active: true,
+      amount: ramt,
+      dayOfMonth: parseInt(document.getElementById('svAccRecDay').value) || 1,
+      startDate: document.getElementById('svAccRecStart').value || new Date().toISOString().slice(0, 10),
+      affectChecking: document.getElementById('svAccRecAffectChecking').checked
+    };
+  }
+  if (editingSavingsId) {
+    const s = accounts.savings.find(x => x.id === editingSavingsId);
+    if (!s) return;
+    s.name = name;
+    s.annualReturnPct = rate;
+    s.returnType = returnType;
+    s.currency = currency;
+    s.recurring = recurring;
+    const newBal = parseFloat(document.getElementById('svAccBalance').value);
+    if (!isNaN(newBal)) {
+      const current = calcSavingsBalanceFor(s);
+      const delta = newBal - current;
+      if (Math.abs(delta) > 0.001) {
+        s.history.push({
+          id: 'h' + Date.now(),
+          type: delta > 0 ? 'deposit' : 'withdraw',
+          amount: Math.abs(delta),
+          date: new Date().toISOString().slice(0, 10),
+          description: 'התאמת יתרה ידנית'
+        });
+      }
+    }
+  } else {
+    const balance = parseFloat(document.getElementById('svAccBalance').value) || 0;
+    const newSv = {
+      id: 'sv' + Date.now(),
+      name, annualReturnPct: rate,
+      returnType,
+      currency,
+      recurring,
+      history: [],
+      lastReturnMonth: null,
+      createdAt: new Date().toISOString()
+    };
+    if (balance > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      newSv.history.push({
+        id: 'h' + Date.now(), type: 'deposit', amount: balance,
+        date: today, description: 'יתרת פתיחה'
+      });
+      if (returnType === 'on-deposit' && rate > 0) {
+        const bonus = balance * rate / 100;
+        newSv.history.push({
+          id: 'h' + Date.now() + 1, type: 'return', amount: bonus,
+          date: today, description: 'בונוס תשואה מההפקדה (' + rate + '%)'
+        });
+      }
+    }
+    accounts.savings.push(newSv);
+  }
+  save();
+  materializeSavingsRecurring();
+  applyMonthlyReturns();
+  save();
+  closeModalById('savingsAccountModal');
+  render();
+}
+
+function deleteSavingsAccount() {
+  if (!editingSavingsId) return;
+  const s = accounts.savings.find(x => x.id === editingSavingsId);
+  if (!s) return;
+  if (!confirm('למחוק את החיסכון "' + s.name + '" וכל ההיסטוריה שלו?')) return;
+  accounts.savings = accounts.savings.filter(x => x.id !== editingSavingsId);
+  save();
+  closeModalById('savingsAccountModal');
+  render();
+}
+
+function toggleSavingsRecurring(id) {
+  const s = accounts.savings.find(x => x.id === id);
+  if (!s || !s.recurring) return;
+  s.recurring.active = !s.recurring.active;
+  save();
+  render();
+}
+
+function renderSavingsGrid() {
+  const grid = document.getElementById('savingsGrid');
+  if (!grid) return;
+  if (accounts.savings.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💰</div><div>עדיין אין חסכונות. לחצו על "חיסכון חדש" כדי להתחיל</div></div>';
+    return;
+  }
+  grid.innerHTML = accounts.savings.map(s => {
+    const cur = s.currency || 'ILS';
+    const sym = curSymbol(cur);
+    const bal = calcSavingsBalanceFor(s);
+    const balIls = bal * getRate(cur);
+    const monthlyRet = projectedMonthlyReturn(s);
+    const totalReturns = (s.history || []).filter(h => h.type === 'return').reduce((a, h) => a + h.amount, 0);
+    const recent = [...(s.history || [])].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+    const badges = [];
+    if (cur !== 'ILS') badges.push(`<span class="sv-badge" style="background:#ebf8ff;color:#2c5282">${sym} ${CURRENCIES[cur].name}</span>`);
+    if (s.recurring && s.recurring.active) badges.push(`<span class="sv-badge recurring">🔁 הו"ק ${fmtCur(s.recurring.amount, cur)}/חודש</span>`);
+    if (s.recurring && !s.recurring.active) badges.push(`<span class="sv-badge paused">⏸ הו"ק מושהית</span>`);
+    if (totalReturns > 0) badges.push(`<span class="sv-badge return">📈 +${fmtCur(totalReturns, cur)} תשואה שנצברה</span>`);
+    const recentLine = recent ? `פעולה אחרונה: ${recent.description || recent.type} • ${new Date(recent.date).toLocaleDateString('he-IL')}` : 'אין פעולות עדיין';
+    const rateClass = (s.annualReturnPct || 0) > 0 ? '' : 'zero';
+    return `
+      <div class="savings-card ${s.annualReturnPct > 0 ? '' : 'no-return'}">
+        <div class="sv-corner-actions">
+          ${s.recurring ? `<button onclick="toggleSavingsRecurring('${s.id}')" title="${s.recurring.active?'השהה הו""ק':'הפעל הו""ק'}">${s.recurring.active?'⏸':'▶'}</button>` : ''}
+          <button onclick="openSavingsAccountModal('${s.id}')" title="ערוך הכל">⚙️</button>
+        </div>
+        <div class="sv-col-main">
+          <div class="sv-name-row">
+            <span class="sv-name" onclick="inlineEditName('${s.id}', this)" title="לחצו לעריכת שם">${s.name}</span>
+          </div>
+          <div class="sv-badges">${badges.join('')}</div>
+          <div class="sv-recent">${recentLine}</div>
+        </div>
+        <div class="sv-col-balance">
+          <div class="label">יתרה נוכחית</div>
+          <div class="sv-balance">${fmtCur(bal, cur)}</div>
+          ${cur !== 'ILS' ? `<div style="font-size:12px;color:#a0aec0;margin-top:2px">≈ ${fmt(balIls)}</div>` : ''}
+        </div>
+        <div class="sv-col-rate">
+          <div class="label">${s.returnType === 'on-deposit' ? 'תשואה מההפקדה' : 'תשואה שנתית'}</div>
+          <div class="sv-rate-display ${rateClass}" onclick="inlineEditRate('${s.id}', this)" title="לחצו לעריכה">
+            <span>${(s.annualReturnPct || 0).toFixed(2)}</span><span class="pct">%</span>
+          </div>
+          ${s.returnType === 'on-deposit'
+            ? `<div class="sv-rate-monthly">בונוס על כל הפקדה</div>`
+            : (s.annualReturnPct > 0 ? `<div class="sv-rate-monthly">צפי חודש: +${fmtCur(monthlyRet, cur)}</div>` : '')}
+        </div>
+        <div class="sv-col-actions">
+          <button class="deposit" onclick="openSavingsModal('deposit','${s.id}')">+ הפקד</button>
+          <button class="withdraw" onclick="openSavingsModal('withdraw','${s.id}')">− משוך</button>
+          <button class="more" onclick="openSavingsAccountModal('${s.id}')">✏️ ערוך פרטים</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function inlineEditName(id, el) {
+  const s = accounts.savings.find(x => x.id === id);
+  if (!s) return;
+  const oldName = s.name;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'sv-name-input';
+  input.value = oldName;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  const finish = (saveIt) => {
+    const newName = input.value.trim();
+    if (saveIt && newName && newName !== oldName) {
+      s.name = newName;
+      save();
+    }
+    render();
+  };
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') finish(true);
+    else if (e.key === 'Escape') finish(false);
+  });
+}
+
+function calcPensionBalance(p) {
+  return (p.history || []).reduce((bal, h) => {
+    if (['monthly-contribution', 'monthly-return', 'manual-deposit'].includes(h.type)) return bal + h.amount;
+    if (['deposit-fee', 'management-fee', 'manual-withdrawal'].includes(h.type)) return bal - h.amount;
+    if (h.type === 'manual-adjustment') return bal + h.amount;
+    return bal;
+  }, 0);
+}
+
+function calcTotalPensions() {
+  return accounts.pensions.reduce((s, p) => s + calcPensionBalance(p), 0);
+}
+
+function applyMonthlyPensions() {
+  const now = new Date();
+  const curKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  accounts.pensions.forEach(p => {
+    if (!p.lastUpdateMonth) { p.lastUpdateMonth = curKey; return; }
+    let [ly, lm] = p.lastUpdateMonth.split('-').map(Number);
+    let cursor = new Date(ly, lm - 1, 1);
+    let safety = 0;
+    while (safety++ < 240) {
+      cursor.setMonth(cursor.getMonth() + 1);
+      const k = cursor.getFullYear() + '-' + String(cursor.getMonth() + 1).padStart(2, '0');
+      if (k >= curKey) break;
+      const lastDay = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).toISOString().slice(0, 10);
+      const balBefore = calcPensionBalance(p);
+      const totalPct = (p.employeePct || 0) + (p.employerPct || 0) + (p.severancePct || 0);
+      const grossDep = (p.monthlySalary || 0) * totalPct / 100;
+      if (grossDep > 0) {
+        p.history.push({ id: 'pn' + Date.now() + Math.random(), type: 'monthly-contribution', amount: grossDep, date: lastDay, description: `הפקדה חודשית מהשכר (${totalPct.toFixed(2)}%)` });
+        const depFee = grossDep * (p.feeOnDeposit || 0) / 100;
+        if (depFee > 0) p.history.push({ id: 'pn' + Date.now() + Math.random(), type: 'deposit-fee', amount: depFee, date: lastDay, description: `דמי ניהול מהפקדה (${p.feeOnDeposit}%)` });
+      }
+      if (balBefore > 0 && (p.annualReturnPct || 0) > 0) {
+        const ret = balBefore * p.annualReturnPct / 12 / 100;
+        p.history.push({ id: 'pn' + Date.now() + Math.random(), type: 'monthly-return', amount: ret, date: lastDay, description: `תשואה חודשית (${p.annualReturnPct}% שנתי)` });
+      }
+      if (balBefore > 0 && (p.feeOnAccumulation || 0) > 0) {
+        const fee = balBefore * p.feeOnAccumulation / 12 / 100;
+        p.history.push({ id: 'pn' + Date.now() + Math.random(), type: 'management-fee', amount: fee, date: lastDay, description: `דמי ניהול מצבירה (${p.feeOnAccumulation}% שנתי)` });
+      }
+      p.lastUpdateMonth = k;
+    }
+  });
+}
+
+let editingPensionId = null;
+function openPensionModal(id) {
+  editingPensionId = id || null;
+  const titleEl = document.getElementById('pensionModalTitle');
+  const delBtn = document.getElementById('pDeleteBtn');
+  if (id) {
+    const p = accounts.pensions.find(x => x.id === id);
+    if (!p) return;
+    titleEl.textContent = 'עריכת פנסיה: ' + p.name;
+    document.getElementById('pName').value = p.name || '';
+    document.getElementById('pFundName').value = p.fundName || '';
+    document.getElementById('pBalance').value = calcPensionBalance(p).toFixed(2);
+    document.getElementById('pSalary').value = p.monthlySalary || 0;
+    document.getElementById('pReturn').value = p.annualReturnPct || 0;
+    document.getElementById('pTrack').value = p.track || '';
+    document.getElementById('pEmployeePct').value = p.employeePct || 0;
+    document.getElementById('pEmployerPct').value = p.employerPct || 0;
+    document.getElementById('pSeverancePct').value = p.severancePct || 0;
+    document.getElementById('pFeeAcc').value = p.feeOnAccumulation || 0;
+    document.getElementById('pFeeDep').value = p.feeOnDeposit || 0;
+    document.getElementById('pStartDate').value = p.startDate || '';
+    delBtn.style.display = 'block';
+  } else {
+    titleEl.textContent = 'פנסיה חדשה';
+    ['pName','pFundName','pTrack','pStartDate'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pBalance').value = '0';
+    document.getElementById('pSalary').value = '0';
+    document.getElementById('pReturn').value = '6';
+    document.getElementById('pEmployeePct').value = '6';
+    document.getElementById('pEmployerPct').value = '6.5';
+    document.getElementById('pSeverancePct').value = '8.33';
+    document.getElementById('pFeeAcc').value = '0.5';
+    document.getElementById('pFeeDep').value = '1.0';
+    delBtn.style.display = 'none';
+  }
+  document.getElementById('pensionModal').classList.add('active');
+}
+
+function savePension() {
+  const name = document.getElementById('pName').value.trim();
+  if (!name) { alert('הזינו שם'); return; }
+  const fields = {
+    name: name,
+    fundName: document.getElementById('pFundName').value.trim(),
+    monthlySalary: parseFloat(document.getElementById('pSalary').value) || 0,
+    annualReturnPct: parseFloat(document.getElementById('pReturn').value) || 0,
+    track: document.getElementById('pTrack').value.trim(),
+    employeePct: parseFloat(document.getElementById('pEmployeePct').value) || 0,
+    employerPct: parseFloat(document.getElementById('pEmployerPct').value) || 0,
+    severancePct: parseFloat(document.getElementById('pSeverancePct').value) || 0,
+    feeOnAccumulation: parseFloat(document.getElementById('pFeeAcc').value) || 0,
+    feeOnDeposit: parseFloat(document.getElementById('pFeeDep').value) || 0,
+    startDate: document.getElementById('pStartDate').value || null
+  };
+  const newBal = parseFloat(document.getElementById('pBalance').value);
+  if (editingPensionId) {
+    const p = accounts.pensions.find(x => x.id === editingPensionId);
+    if (!p) return;
+    Object.assign(p, fields);
+    if (!isNaN(newBal)) {
+      const current = calcPensionBalance(p);
+      const delta = newBal - current;
+      if (Math.abs(delta) > 0.001) {
+        p.history.push({
+          id: 'pn' + Date.now(),
+          type: 'manual-adjustment',
+          amount: delta,
+          date: new Date().toISOString().slice(0, 10),
+          description: 'התאמת צבירה ידנית'
+        });
+      }
+    }
+  } else {
+    const np = {
+      id: 'pension-' + Date.now(),
+      ...fields,
+      history: [],
+      lastUpdateMonth: null,
+      createdAt: new Date().toISOString()
+    };
+    if (!isNaN(newBal) && newBal > 0) {
+      np.history.push({
+        id: 'pn' + Date.now(),
+        type: 'manual-deposit',
+        amount: newBal,
+        date: new Date().toISOString().slice(0, 10),
+        description: 'יתרת פתיחה'
+      });
+    }
+    accounts.pensions.push(np);
+  }
+  save();
+  closeModalById('pensionModal');
+  render();
+}
+
+function deletePension() {
+  if (!editingPensionId) return;
+  const p = accounts.pensions.find(x => x.id === editingPensionId);
+  if (!p) return;
+  if (!confirm('למחוק את הפנסיה "' + p.name + '" וכל ההיסטוריה שלה?')) return;
+  accounts.pensions = accounts.pensions.filter(x => x.id !== editingPensionId);
+  save();
+  closeModalById('pensionModal');
+  render();
+}
+
+let depositPensionId = null;
+function depositToPension(id) {
+  depositPensionId = id;
+  document.getElementById('pDepAmount').value = '';
+  document.getElementById('pDepDesc').value = '';
+  document.getElementById('pDepDate').valueAsDate = new Date();
+  document.getElementById('pensionDepositModal').classList.add('active');
+}
+
+function savePensionDeposit() {
+  const amount = parseFloat(document.getElementById('pDepAmount').value);
+  if (isNaN(amount) || amount <= 0) { alert('הזינו סכום חוקי'); return; }
+  const p = accounts.pensions.find(x => x.id === depositPensionId);
+  if (!p) return;
+  p.history.push({
+    id: 'pn' + Date.now(),
+    type: 'manual-deposit',
+    amount: amount,
+    date: document.getElementById('pDepDate').value || new Date().toISOString().slice(0, 10),
+    description: document.getElementById('pDepDesc').value || 'הפקדה ידנית'
+  });
+  save();
+  closeModalById('pensionDepositModal');
+  render();
+}
+
+function renderPensions() {
+  const list = document.getElementById('pensionsList');
+  if (!list) return;
+  if (accounts.pensions.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏛️</div><div>אין פנסיות. לחצו על "פנסיה חדשה" כדי להוסיף</div></div>';
+    return;
+  }
+  list.innerHTML = accounts.pensions.map(p => {
+    const bal = calcPensionBalance(p);
+    const totalPct = (p.employeePct || 0) + (p.employerPct || 0) + (p.severancePct || 0);
+    const grossDep = (p.monthlySalary || 0) * totalPct / 100;
+    const depFee = grossDep * (p.feeOnDeposit || 0) / 100;
+    const netDep = grossDep - depFee;
+    const monthlyRet = bal * (p.annualReturnPct || 0) / 12 / 100;
+    const mgmtFee = bal * (p.feeOnAccumulation || 0) / 12 / 100;
+    const monthlyNet = netDep + monthlyRet - mgmtFee;
+    const totalReturns = (p.history || []).filter(h => h.type === 'monthly-return').reduce((s, h) => s + h.amount, 0);
+    const totalFees = (p.history || []).filter(h => h.type === 'management-fee' || h.type === 'deposit-fee').reduce((s, h) => s + h.amount, 0);
+    return `
+      <div class="pension-card">
+        <div class="pension-header">
+          <h3>👤 ${p.name}${p.fundName ? ` <span style="font-size:14px;color:#a0aec0;font-weight:normal">• ${p.fundName}</span>` : ''}</h3>
+          <button class="pension-edit-btn" onclick="openPensionModal('${p.id}')">⚙️ ערוך את כל הפרטים</button>
+        </div>
+        <div class="pension-stats">
+          <div class="pension-stat">
+            <div class="label">צבירה נוכחית</div>
+            <div class="value">${fmt(bal)}</div>
+          </div>
+          <div class="pension-stat">
+            <div class="label">שכר חודשי</div>
+            <div class="value">${fmt(p.monthlySalary || 0)}</div>
+          </div>
+          <div class="pension-stat">
+            <div class="label">הפקדה חודשית</div>
+            <div class="value">${fmt(grossDep)}</div>
+          </div>
+          <div class="pension-stat">
+            <div class="label">תשואה שנתית</div>
+            <div class="value">${(p.annualReturnPct || 0).toFixed(2)}%</div>
+          </div>
+        </div>
+        <div class="pension-details">
+          <div><strong>אחוזי הפקדה:</strong> עובד ${(p.employeePct||0).toFixed(2)}% • מעביד ${(p.employerPct||0).toFixed(2)}% • פיצויים ${(p.severancePct||0).toFixed(2)}% (סה"כ ${totalPct.toFixed(2)}%)</div>
+          <div><strong>דמי ניהול:</strong> ${(p.feeOnAccumulation||0).toFixed(2)}% מצבירה (שנתי) • ${(p.feeOnDeposit||0).toFixed(2)}% מהפקדה</div>
+          ${p.track ? `<div><strong>מסלול:</strong> ${p.track}</div>` : ''}
+          ${p.startDate ? `<div><strong>תחילת חברות:</strong> ${new Date(p.startDate).toLocaleDateString('he-IL')}</div>` : ''}
+          ${totalReturns > 0 ? `<div><strong>תשואות שצברו:</strong> ${fmt(totalReturns)} <span style="color:#a0aec0">• דמ"נ שנגבו: ${fmt(totalFees)}</span></div>` : ''}
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid #fed7aa">
+            <strong>שינוי חודשי צפוי:</strong>
+            +${fmt(netDep)} הפקדה נטו + ${fmt(monthlyRet)} תשואה − ${fmt(mgmtFee)} דמ"נ
+            = <strong style="color:${monthlyNet>=0?'#48bb78':'#f56565'}">${monthlyNet>=0?'+':''}${fmt(monthlyNet)}</strong>
+          </div>
+        </div>
+        <div class="pension-actions">
+          <button class="deposit" onclick="depositToPension('${p.id}')">+ הפקדה ידנית</button>
+          <button class="more" onclick="openPensionModal('${p.id}')">✏️ ערוך פרטים</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function inlineEditRate(id, el) {
+  const s = accounts.savings.find(x => x.id === id);
+  if (!s) return;
+  const oldRate = s.annualReturnPct || 0;
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.step = '0.01';
+  input.className = 'sv-rate-edit-input';
+  input.value = oldRate;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  const finish = (saveIt) => {
+    const v = parseFloat(input.value);
+    if (saveIt && !isNaN(v) && v !== oldRate) {
+      s.annualReturnPct = v;
+      save();
+    }
+    render();
+  };
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') finish(true);
+    else if (e.key === 'Escape') finish(false);
+  });
+}
+
+function openHistory() {
+  document.getElementById('historyFilter').value = 'all';
+  renderHistoryModal();
+  document.getElementById('historyModal').classList.add('active');
+}
+
+function renderHistoryModal() {
+  const filter = document.getElementById('historyFilter').value;
+  const items = [];
+  if (filter !== 'savings') {
+    (accounts.checking.history || []).forEach(h => items.push({...h, account: 'עו"ש'}));
+  }
+  if (filter !== 'checking') {
+    accounts.savings.forEach(sv => (sv.history || []).forEach(h => items.push({...h, account: 'חיסכון: ' + sv.name})));
+  }
+  items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const list = document.getElementById('historyListContent');
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state">אין פעולות להצגה</div>';
+    return;
+  }
+  const typeLabels = {
+    'deposit': 'הפקדה', 'withdraw': 'משיכה', 'set-adjustment': 'התאמת יתרה',
+    'savings-transfer-out': 'העברה לחיסכון', 'savings-transfer-in': 'משיכה מחיסכון',
+    'return': 'תשואה'
+  };
+  list.innerHTML = items.map(h => {
+    const isIn = h.type === 'deposit' || h.type === 'return' || h.type === 'savings-transfer-in' || (h.type === 'set-adjustment' && h.amount >= 0);
+    const sign = isIn ? '+' : '−';
+    const cls = isIn ? 'in' : 'out';
+    const dateStr = h.date ? new Date(h.date).toLocaleDateString('he-IL') : '';
+    return `<div class="history-item">
+      <div class="h-info">
+        <div class="h-title">${h.description || typeLabels[h.type] || h.type}</div>
+        <div class="h-meta">${h.account} • ${typeLabels[h.type] || h.type} • ${dateStr}</div>
+      </div>
+      <div class="h-amount ${cls}">${sign}${fmt(Math.abs(h.amount))}</div>
+    </div>`;
+  }).join('');
+}
+
+function closeModalById(id) { document.getElementById(id).classList.remove('active'); }
+
+async function exportPDF() {
+  if (!window.jspdf || !window.html2canvas) { alert('ספריית PDF לא זמינה'); return; }
+  const reportEl = buildPdfReport();
+  document.body.appendChild(reportEl);
+  try {
+    const canvas = await html2canvas(reportEl, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+    while (heightLeft > 0) {
+      position = -(imgHeight - heightLeft);
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+    pdf.save('דוח-פיננסי-קושקושונים-' + new Date().toISOString().slice(0,10) + '.pdf');
+  } catch (e) {
+    alert('שגיאה בייצוא PDF: ' + e.message);
+  } finally {
+    reportEl.remove();
+  }
+}
+
+function buildPdfReport() {
+  const monthTx = getMonthTransactions();
+  const monthInc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const monthExp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balance = monthInc - monthExp;
+  const ch = calcCheckingBalance();
+  const sv = calcSavingsBalance();
+  const pn = calcTotalPensions();
+  const nw = ch + sv + pn;
+  const monthLabel = currentDate.toLocaleDateString('he-IL', {month: 'long', year: 'numeric'});
+  const nowStr = new Date().toLocaleString('he-IL');
+
+  const expByCat = {};
+  monthTx.filter(t => t.type === 'expense').forEach(t => { expByCat[t.category] = (expByCat[t.category] || 0) + t.amount; });
+  const sortedCats = Object.entries(expByCat).sort((a,b)=>b[1]-a[1]);
+
+  const incByCat = {};
+  monthTx.filter(t => t.type === 'income').forEach(t => { incByCat[t.category] = (incByCat[t.category] || 0) + t.amount; });
+  const sortedInc = Object.entries(incByCat).sort((a,b)=>b[1]-a[1]);
+
+  const budgetItems = EXPENSE_CATEGORIES.filter(c => budgets[c] > 0).map(cat => {
+    const spent = monthTx.filter(t => t.type === 'expense' && t.category === cat).reduce((s, t) => s + t.amount, 0);
+    return { cat, spent, budget: budgets[cat], pct: (spent / budgets[cat]) * 100 };
+  });
+
+  const recurringActive = recurringRules.filter(r => r.active);
+
+  const sortedTx = [...monthTx].sort((a, b) => b.date.localeCompare(a.date));
+
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:-99999px;right:0;width:794px;padding:30px;background:white;font-family:Arial,sans-serif;color:#2d3748;direction:rtl;text-align:right;';
+  el.innerHTML = `
+    <div style="text-align:center;border-bottom:3px solid #667eea;padding-bottom:16px;margin-bottom:24px">
+      <h1 style="font-size:32px;color:#667eea;margin:0">קושקושונים אימפריה</h1>
+      <div style="color:#718096;margin-top:6px;font-size:14px">דוח פיננסי - ${monthLabel}</div>
+      <div style="color:#a0aec0;font-size:12px;margin-top:4px">הופק ב-${nowStr}</div>
+    </div>
+
+    <h2 style="font-size:18px;color:#2d3748;border-right:4px solid #667eea;padding-right:10px;margin:20px 0 12px">סיכום יתרות</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr style="background:#f7fafc">
+        <td style="padding:12px;font-weight:bold;border:1px solid #e2e8f0;width:25%">עובר ושב</td>
+        <td style="padding:12px;font-weight:bold;border:1px solid #e2e8f0;width:25%">חיסכון</td>
+        <td style="padding:12px;font-weight:bold;border:1px solid #e2e8f0;width:25%">פנסיה</td>
+        <td style="padding:12px;font-weight:bold;border:1px solid #e2e8f0;width:25%">שווי כולל</td>
+      </tr>
+      <tr>
+        <td style="padding:14px;border:1px solid #e2e8f0;font-size:20px;font-weight:bold;color:#2b6cb0">${fmt(ch)}</td>
+        <td style="padding:14px;border:1px solid #e2e8f0;font-size:20px;font-weight:bold;color:#2f855a">${fmt(sv)}</td>
+        <td style="padding:14px;border:1px solid #e2e8f0;font-size:20px;font-weight:bold;color:#c05621">${fmt(pn)}</td>
+        <td style="padding:14px;border:1px solid #e2e8f0;font-size:20px;font-weight:bold;color:#6b46c1">${fmt(nw)}</td>
+      </tr>
+    </table>
+
+    ${accounts.pensions.length ? `
+    <h2 style="font-size:16px;color:#2d3748;margin:18px 0 8px">פירוט פנסיות</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">
+      <tr style="background:#f7fafc">
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">שם</th>
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">קופה</th>
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">צבירה</th>
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">שכר</th>
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">הפקדה חודשית</th>
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">תשואה</th>
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">דמ"נ צבירה</th>
+        <th style="padding:7px;border:1px solid #e2e8f0;text-align:right">דמ"נ הפקדה</th>
+      </tr>
+      ${accounts.pensions.map(p => {
+        const b = calcPensionBalance(p);
+        const totPct = (p.employeePct||0)+(p.employerPct||0)+(p.severancePct||0);
+        const grossDep = (p.monthlySalary||0) * totPct / 100;
+        return `<tr>
+          <td style="padding:7px;border:1px solid #e2e8f0;font-weight:bold">${p.name}</td>
+          <td style="padding:7px;border:1px solid #e2e8f0">${p.fundName || '—'}</td>
+          <td style="padding:7px;border:1px solid #e2e8f0;font-weight:bold;color:#c05621">${fmt(b)}</td>
+          <td style="padding:7px;border:1px solid #e2e8f0">${fmt(p.monthlySalary||0)}</td>
+          <td style="padding:7px;border:1px solid #e2e8f0">${fmt(grossDep)} (${totPct.toFixed(2)}%)</td>
+          <td style="padding:7px;border:1px solid #e2e8f0">${(p.annualReturnPct||0).toFixed(2)}%</td>
+          <td style="padding:7px;border:1px solid #e2e8f0">${(p.feeOnAccumulation||0).toFixed(2)}%</td>
+          <td style="padding:7px;border:1px solid #e2e8f0">${(p.feeOnDeposit||0).toFixed(2)}%</td>
+        </tr>`;
+      }).join('')}
+      <tr style="background:#fef5e7;font-weight:bold">
+        <td colspan="2" style="padding:7px;border:1px solid #e2e8f0">סה"כ פנסיות</td>
+        <td style="padding:7px;border:1px solid #e2e8f0;color:#c05621">${fmt(pn)}</td>
+        <td colspan="5" style="padding:7px;border:1px solid #e2e8f0"></td>
+      </tr>
+    </table>` : ''}
+
+    ${accounts.savings.length ? `
+    <h2 style="font-size:16px;color:#2d3748;margin:18px 0 8px">פירוט חסכונות</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px">
+      <tr style="background:#f7fafc">
+        <th style="padding:8px;border:1px solid #e2e8f0;text-align:right">שם החיסכון</th>
+        <th style="padding:8px;border:1px solid #e2e8f0;text-align:right">יתרה</th>
+        <th style="padding:8px;border:1px solid #e2e8f0;text-align:right">תשואה שנתית</th>
+        <th style="padding:8px;border:1px solid #e2e8f0;text-align:right">תשואות שצברו</th>
+        <th style="padding:8px;border:1px solid #e2e8f0;text-align:right">הוראת קבע</th>
+      </tr>
+      ${accounts.savings.map(s => {
+        const cur = s.currency || 'ILS';
+        const bal = calcSavingsBalanceFor(s);
+        const balIls = bal * getRate(cur);
+        const totRet = (s.history || []).filter(h => h.type === 'return').reduce((a, h) => a + h.amount, 0);
+        const recText = s.recurring ? (s.recurring.active ? fmtCur(s.recurring.amount, cur) + ' ב-' + s.recurring.dayOfMonth + ' בחודש' : 'מושהית') : '—';
+        const rateLabel = s.returnType === 'on-deposit' ? 'מהפקדה' : 'שנתי';
+        return `<tr>
+          <td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">${s.name}${cur!=='ILS'?` <span style="font-size:11px;color:#a0aec0">(${cur})</span>`:''}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;color:#2f855a">${fmtCur(bal, cur)}${cur!=='ILS'?` <span style="font-size:11px;color:#a0aec0">≈ ${fmt(balIls)}</span>`:''}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0">${(s.annualReturnPct || 0).toFixed(2)}% ${rateLabel}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0;color:#2c7a7b">${fmtCur(totRet, cur)}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0">${recText}</td>
+        </tr>`;
+      }).join('')}
+      <tr style="background:#f0fff4;font-weight:bold">
+        <td style="padding:8px;border:1px solid #e2e8f0">סה"כ</td>
+        <td style="padding:8px;border:1px solid #e2e8f0;color:#2f855a">${fmt(sv)}</td>
+        <td colspan="3" style="padding:8px;border:1px solid #e2e8f0"></td>
+      </tr>
+    </table>` : ''}
+
+    <h2 style="font-size:18px;color:#2d3748;border-right:4px solid #48bb78;padding-right:10px;margin:20px 0 12px">סיכום חודשי - ${monthLabel}</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr style="background:#f7fafc">
+        <td style="padding:10px;font-weight:bold;border:1px solid #e2e8f0">סך הכנסות</td>
+        <td style="padding:10px;font-weight:bold;border:1px solid #e2e8f0">סך הוצאות</td>
+        <td style="padding:10px;font-weight:bold;border:1px solid #e2e8f0">מאזן חודשי</td>
+      </tr>
+      <tr>
+        <td style="padding:12px;border:1px solid #e2e8f0;font-size:18px;color:#48bb78;font-weight:bold">${fmt(monthInc)}</td>
+        <td style="padding:12px;border:1px solid #e2e8f0;font-size:18px;color:#f56565;font-weight:bold">${fmt(monthExp)}</td>
+        <td style="padding:12px;border:1px solid #e2e8f0;font-size:18px;font-weight:bold;color:${balance>=0?'#48bb78':'#f56565'}">${fmt(balance)}</td>
+      </tr>
+    </table>
+
+    ${sortedInc.length ? `
+    <h2 style="font-size:16px;color:#2d3748;margin:18px 0 8px">הכנסות לפי קטגוריה</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px">
+      <tr style="background:#f7fafc"><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">קטגוריה</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">סכום</th></tr>
+      ${sortedInc.map(([c,a]) => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${c}</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;color:#48bb78">${fmt(a)}</td></tr>`).join('')}
+    </table>` : ''}
+
+    ${sortedCats.length ? `
+    <h2 style="font-size:16px;color:#2d3748;margin:18px 0 8px">הוצאות לפי קטגוריה</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px">
+      <tr style="background:#f7fafc"><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">קטגוריה</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">סכום</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">% מסך</th></tr>
+      ${sortedCats.map(([c,a]) => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${c}</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;color:#f56565">${fmt(a)}</td><td style="padding:8px;border:1px solid #e2e8f0">${((a/monthExp)*100).toFixed(1)}%</td></tr>`).join('')}
+    </table>` : ''}
+
+    ${budgetItems.length ? `
+    <h2 style="font-size:16px;color:#2d3748;margin:18px 0 8px">תקציב מול ביצוע</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px">
+      <tr style="background:#f7fafc"><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">קטגוריה</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">תקציב</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">ביצוע</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">ניצול</th></tr>
+      ${budgetItems.map(b => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${b.cat}</td><td style="padding:8px;border:1px solid #e2e8f0">${fmt(b.budget)}</td><td style="padding:8px;border:1px solid #e2e8f0">${fmt(b.spent)}</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;color:${b.pct<75?'#48bb78':b.pct<100?'#ed8936':'#f56565'}">${b.pct.toFixed(0)}%</td></tr>`).join('')}
+    </table>` : ''}
+
+    ${recurringActive.length ? `
+    <h2 style="font-size:16px;color:#2d3748;margin:18px 0 8px">תשלומים קבועים פעילים</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px">
+      <tr style="background:#f7fafc"><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">תיאור</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">קטגוריה</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">סוג</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:right">סכום חודשי</th></tr>
+      ${recurringActive.map(r => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${r.description || '-'}</td><td style="padding:8px;border:1px solid #e2e8f0">${r.category}</td><td style="padding:8px;border:1px solid #e2e8f0">${r.type==='income'?'הכנסה':'הוצאה'}</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">${fmt(toIls(r.originalAmount, r.currency, exchangeRate.rate))}${r.currency==='USD'?` (${fmtUsd(r.originalAmount)})`:''}</td></tr>`).join('')}
+    </table>` : ''}
+
+    ${sortedTx.length ? `
+    <h2 style="font-size:16px;color:#2d3748;margin:18px 0 8px">פירוט תנועות החודש (${sortedTx.length})</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">
+      <tr style="background:#f7fafc"><th style="padding:6px;border:1px solid #e2e8f0;text-align:right">תאריך</th><th style="padding:6px;border:1px solid #e2e8f0;text-align:right">תיאור</th><th style="padding:6px;border:1px solid #e2e8f0;text-align:right">קטגוריה</th><th style="padding:6px;border:1px solid #e2e8f0;text-align:right">סכום</th></tr>
+      ${sortedTx.map(t => {
+        let note = '';
+        if (t.installment) note = ` (${t.installment.number}/${t.installment.total})`;
+        if (t.recurringId) note += ' 🔁';
+        let amtCol = t.type==='expense'?'#f56565':'#48bb78';
+        let amtSign = t.type==='expense'?'−':'+';
+        let amtText = `${amtSign}${fmt(t.amount)}`;
+        if (t.currency === 'USD') amtText += ` (${fmtUsd(t.originalAmount)})`;
+        return `<tr><td style="padding:6px;border:1px solid #e2e8f0">${new Date(t.date).toLocaleDateString('he-IL')}</td><td style="padding:6px;border:1px solid #e2e8f0">${(t.description||'-')+note}</td><td style="padding:6px;border:1px solid #e2e8f0">${t.category}</td><td style="padding:6px;border:1px solid #e2e8f0;font-weight:bold;color:${amtCol}">${amtText}</td></tr>`;
+      }).join('')}
+    </table>` : ''}
+
+    <div style="margin-top:30px;text-align:center;color:#a0aec0;font-size:11px;border-top:1px solid #e2e8f0;padding-top:12px">
+      קושקושונים אימפריה - מערכת ניהול פיננסי אישית | שערים: 1$ = ${exchangeRate.rates.USD.toFixed(4)} ₪ • 1€ = ${(exchangeRate.rates.EUR||0).toFixed(4)} ₪
+    </div>
+  `;
+  return el;
+}
+
+function materializeRecurring() {
+  // Create transactions for current month from each active rule, up to current month
+  const now = new Date();
+  const horizon = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const compareEnd = new Date(Math.max(now, horizon).valueOf());
+  compareEnd.setMonth(compareEnd.getMonth() + 1, 0); // last day of that month
+
+  recurringRules.forEach(rule => {
+    if (!rule.active) return;
+    const start = new Date(rule.startDate);
+    const end = rule.endDate ? new Date(rule.endDate) : compareEnd;
+    const finalEnd = end < compareEnd ? end : compareEnd;
+
+    let d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    while (d <= finalEnd) {
+      const isoDate = d.toISOString().slice(0, 10);
+      const exists = transactions.some(t => t.recurringId === rule.id && t.date === isoDate);
+      if (!exists) {
+        transactions.push({
+          id: Date.now() + Math.random(),
+          type: rule.type,
+          amount: toIls(rule.originalAmount, rule.currency, exchangeRate.rate),
+          originalAmount: rule.originalAmount,
+          currency: rule.currency,
+          rate: rule.currency === 'USD' ? exchangeRate.rate : null,
+          category: rule.category,
+          description: rule.description,
+          date: isoDate,
+          recurringId: rule.id
+        });
+      }
+      d = new Date(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    }
+  });
+  save();
+}
+
+function getMonthTransactions() {
+  const key = getCurrentMonthKey();
+  return transactions.filter(t => t.date.startsWith(key));
+}
+
+function render() {
+  document.getElementById('currentMonth').textContent = currentDate.toLocaleDateString('he-IL', {month: 'long', year: 'numeric'});
+  renderRate();
+  renderAccounts();
+  renderSavingsGrid();
+  renderPensions();
+  renderStats();
+  renderTransactions();
+  renderRecurring();
+  renderBudget();
+  renderCharts();
+}
+
+function renderRate() {
+  const u = (exchangeRate.rates.USD || 0).toFixed(3);
+  const e = (exchangeRate.rates.EUR || 0).toFixed(3);
+  document.getElementById('rateDisplay').textContent = '$' + u + ' | €' + e;
+}
+
+function renderStats() {
+  const monthTx = getMonthTransactions();
+  const income = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balance = income - expense;
+  const totalBudget = Object.values(budgets).reduce((s, v) => s + (v || 0), 0);
+  const remaining = totalBudget - expense;
+
+  document.getElementById('totalIncome').textContent = fmt(income);
+  document.getElementById('totalExpense').textContent = fmt(expense);
+  document.getElementById('balance').textContent = fmt(balance);
+  document.getElementById('balance').style.color = balance >= 0 ? '#48bb78' : '#f56565';
+  document.getElementById('balanceLabel').textContent = balance >= 0 ? 'חיסכון חודשי' : 'גירעון';
+  document.getElementById('budgetRemaining').textContent = fmt(remaining);
+  document.getElementById('budgetRemaining').style.color = remaining >= 0 ? '#ed8936' : '#f56565';
+  document.getElementById('budgetTotal').textContent = 'מתוך ' + fmt(totalBudget);
+  document.getElementById('incomeCount').textContent = monthTx.filter(t => t.type === 'income').length + ' תנועות';
+  document.getElementById('expenseCount').textContent = monthTx.filter(t => t.type === 'expense').length + ' תנועות';
+}
+
+function renderTransactions() {
+  const monthTx = getMonthTransactions();
+  const filterType = document.getElementById('filterType').value;
+  const filterCategory = document.getElementById('filterCategory').value;
+  let filtered = monthTx;
+  if (filterType !== 'all') filtered = filtered.filter(t => t.type === filterType);
+  if (filterCategory !== 'all') filtered = filtered.filter(t => t.category === filterCategory);
+  filtered.sort((a, b) => b.date.localeCompare(a.date));
+
+  const list = document.getElementById('transactionsList');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><div>אין תנועות להצגה</div></div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(t => {
+    const badges = [];
+    if (t.recurringId) badges.push('<span class="transaction-badge recurring">🔁 קבועה</span>');
+    if (t.installment) badges.push(`<span class="transaction-badge installment">💳 ${t.installment.number}/${t.installment.total}</span>`);
+    if (t.currency === 'USD') badges.push('<span class="transaction-badge usd">$ דולר</span>');
+    let originalLine = '';
+    if (t.currency === 'USD') {
+      originalLine = `<span class="original">${fmtUsd(t.originalAmount)} × ${Number(t.rate).toFixed(4)}</span>`;
+    }
+    return `
+      <div class="transaction">
+        <div class="transaction-info">
+          <div class="transaction-title">${t.description || t.category} ${badges.join(' ')}</div>
+          <div class="transaction-meta">${t.category} • ${new Date(t.date).toLocaleDateString('he-IL')}</div>
+        </div>
+        <div class="transaction-amount ${t.type}">
+          ${t.type === 'expense' ? '-' : '+'}${fmt(t.amount)}
+          ${originalLine}
+        </div>
+        <button class="delete-btn" onclick="deleteTransaction(${t.id})">×</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderRecurring() {
+  const active = recurringRules.filter(r => r.active).length;
+  document.getElementById('recurringCount').textContent = active + ' פעילים מתוך ' + recurringRules.length;
+  const list = document.getElementById('recurringList');
+  if (recurringRules.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔁</div><div>אין הוראות קבע. הוסיפו תנועה והפעילו את האפשרות "קבועה"</div></div>';
+    return;
+  }
+  list.innerHTML = recurringRules.map(r => {
+    const ilsAmount = toIls(r.originalAmount, r.currency, exchangeRate.rate);
+    const sym = r.currency === 'USD' ? '$' : '₪';
+    const original = r.currency === 'USD' ? `${fmtUsd(r.originalAmount)} ≈ ` : '';
+    const endNote = r.endDate ? ` • עד ${new Date(r.endDate).toLocaleDateString('he-IL')}` : '';
+    const typeLabel = r.type === 'income' ? 'הכנסה' : 'הוצאה';
+    return `
+      <div class="recurring-card ${!r.active ? 'paused' : ''}">
+        <div class="rec-actions">
+          <button onclick="toggleRecurring('${r.id}')" title="${r.active ? 'השהה' : 'הפעל'}">${r.active ? '⏸' : '▶'}</button>
+          <button onclick="deleteRecurring('${r.id}')" title="מחק">✕</button>
+        </div>
+        <div class="rec-title">${r.description || r.category}</div>
+        <div class="rec-meta">${typeLabel} • ${r.category} • ה-${new Date(r.startDate).getDate()} בחודש${endNote}</div>
+        <div class="rec-amount" style="color:${r.type==='income'?'#48bb78':'#c05621'}">${original}${fmt(ilsAmount)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderBudget() {
+  const monthTx = getMonthTransactions();
+  const list = document.getElementById('budgetList');
+  const items = EXPENSE_CATEGORIES.filter(c => budgets[c] > 0);
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div>טרם הוגדר תקציב. לחצו על "ערוך תקציב" כדי להתחיל</div></div>';
+    return;
+  }
+  list.innerHTML = items.map(cat => {
+    const spent = monthTx.filter(t => t.type === 'expense' && t.category === cat).reduce((s, t) => s + t.amount, 0);
+    const budget = budgets[cat];
+    const pct = Math.min((spent / budget) * 100, 100);
+    const cls = pct < 75 ? 'ok' : pct < 100 ? 'warning' : 'danger';
+    return `
+      <div class="budget-item">
+        <div class="budget-item-header">
+          <span class="budget-item-name">${cat}</span>
+          <span class="budget-item-values">${fmt(spent)} / ${fmt(budget)} (${pct.toFixed(0)}%)</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${cls}" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openBudgetModal() {
+  const inputs = document.getElementById('budgetInputs');
+  inputs.innerHTML = EXPENSE_CATEGORIES.map(cat => `
+    <div class="form-group">
+      <label>${cat}</label>
+      <input type="number" min="0" step="1" data-category="${cat}" value="${budgets[cat] || ''}" placeholder="0">
+    </div>
+  `).join('');
+  document.getElementById('budgetModal').classList.add('active');
+}
+function closeBudgetModal() { document.getElementById('budgetModal').classList.remove('active'); }
+function saveBudget() {
+  document.querySelectorAll('#budgetInputs input').forEach(inp => {
+    const cat = inp.dataset.category;
+    const v = parseFloat(inp.value);
+    budgets[cat] = isNaN(v) ? 0 : v;
+  });
+  save();
+  closeBudgetModal();
+  render();
+}
+
+function openRateModal() {
+  document.getElementById('rateInput').value = exchangeRate.rates.USD;
+  document.getElementById('rateInputEur').value = exchangeRate.rates.EUR || 4.0;
+  document.getElementById('rateInputGbp').value = exchangeRate.rates.GBP || 4.7;
+  const lbl = exchangeRate.updatedAt ? 'עודכן לאחרונה: ' + new Date(exchangeRate.updatedAt).toLocaleString('he-IL') + ' (' + (exchangeRate.source || 'לא ידוע') + ')' : 'לא עודכן עדיין מהאינטרנט';
+  document.getElementById('rateUpdatedLabel').textContent = lbl;
+  document.getElementById('rateModal').classList.add('active');
+}
+function closeRateModal() { document.getElementById('rateModal').classList.remove('active'); }
+function saveManualRate() {
+  const usd = parseFloat(document.getElementById('rateInput').value);
+  const eur = parseFloat(document.getElementById('rateInputEur').value);
+  const gbp = parseFloat(document.getElementById('rateInputGbp').value);
+  if (isNaN(usd) || usd <= 0) { alert('הזינו שער דולר חוקי'); return; }
+  exchangeRate = {
+    rate: usd,
+    rates: { USD: usd, EUR: !isNaN(eur)&&eur>0 ? eur : exchangeRate.rates.EUR, GBP: !isNaN(gbp)&&gbp>0 ? gbp : exchangeRate.rates.GBP },
+    updatedAt: new Date().toISOString(), source: 'ידני'
+  };
+  save();
+  closeRateModal();
+  render();
+}
+
+async function fetchExchangeRate(showAlert) {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    if (!res.ok) throw new Error('network');
+    const data = await res.json();
+    if (data && data.rates && data.rates.ILS) {
+      const usdToIls = data.rates.ILS;
+      const eurToIls = data.rates.EUR ? usdToIls / data.rates.EUR : 4.0;
+      const gbpToIls = data.rates.GBP ? usdToIls / data.rates.GBP : 4.7;
+      exchangeRate = {
+        rate: usdToIls,
+        rates: { USD: usdToIls, EUR: eurToIls, GBP: gbpToIls },
+        updatedAt: new Date().toISOString(),
+        source: 'open.er-api.com'
+      };
+      save();
+      render();
+      if (showAlert) {
+        document.getElementById('rateInput').value = exchangeRate.rate.toFixed(4);
+        if (document.getElementById('rateInputEur')) document.getElementById('rateInputEur').value = eurToIls.toFixed(4);
+        if (document.getElementById('rateInputGbp')) document.getElementById('rateInputGbp').value = gbpToIls.toFixed(4);
+        document.getElementById('rateUpdatedLabel').textContent = 'עודכן: ' + new Date(exchangeRate.updatedAt).toLocaleString('he-IL') + ' (open.er-api.com)';
+        alert('השערים עודכנו:\nדולר: ' + usdToIls.toFixed(4) + ' ₪\nיורו: ' + eurToIls.toFixed(4) + ' ₪\nליש"ט: ' + gbpToIls.toFixed(4) + ' ₪');
+      }
+      return;
+    }
+    throw new Error('no rate');
+  } catch (e) {
+    if (showAlert) alert('לא הצלחתי למשוך שער. אפשר להזין ידנית.');
+  }
+}
+
+function renderCharts() {
+  renderCategoryChart();
+  renderBudgetChart();
+  renderTrendChart();
+}
+
+const PALETTE = ['#667eea','#764ba2','#48bb78','#ed8936','#f56565','#4299e1','#ecc94b','#9f7aea','#38b2ac','#ed64a6','#a0aec0','#d69e2e','#319795'];
+
+function renderCategoryChart() {
+  const monthTx = getMonthTransactions().filter(t => t.type === 'expense');
+  const byCategory = {};
+  monthTx.forEach(t => { byCategory[t.category] = (byCategory[t.category] || 0) + t.amount; });
+  const labels = Object.keys(byCategory);
+  const data = Object.values(byCategory);
+  if (charts.category) charts.category.destroy();
+  const ctx = document.getElementById('categoryChart').getContext('2d');
+  charts.category = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels.length ? labels : ['אין נתונים'],
+      datasets: [{
+        data: data.length ? data : [1],
+        backgroundColor: labels.length ? PALETTE.slice(0, labels.length) : ['#e2e8f0'],
+        borderWidth: 2, borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { family: 'inherit', size: 12 }, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => labels.length ? `${ctx.label}: ${fmt(ctx.parsed)}` : 'אין הוצאות החודש' } }
+      }
+    }
+  });
+}
+
+function renderBudgetChart() {
+  const monthTx = getMonthTransactions();
+  const cats = EXPENSE_CATEGORIES.filter(c => budgets[c] > 0);
+  const spent = cats.map(c => monthTx.filter(t => t.type === 'expense' && t.category === c).reduce((s, t) => s + t.amount, 0));
+  const planned = cats.map(c => budgets[c]);
+  if (charts.budget) charts.budget.destroy();
+  const ctx = document.getElementById('budgetChart').getContext('2d');
+  charts.budget = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: cats.length ? cats : ['אין תקציב מוגדר'],
+      datasets: [
+        { label: 'תקציב', data: planned.length ? planned : [0], backgroundColor: '#cbd5e0' },
+        { label: 'ביצוע', data: spent.length ? spent : [0], backgroundColor: '#667eea' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { ticks: { callback: v => fmt(v) } } }
+    }
+  });
+}
+
+function renderTrendChart() {
+  const months = [];
+  const base = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  for (let i = 5; i >= 0; i--) {
+    months.push(new Date(base.getFullYear(), base.getMonth() - i, 1));
+  }
+  const labels = months.map(d => d.toLocaleDateString('he-IL', {month: 'short', year: '2-digit'}));
+  const incomeData = months.map(d => {
+    const k = monthKey(d);
+    return transactions.filter(t => t.type === 'income' && t.date.startsWith(k)).reduce((s, t) => s + t.amount, 0);
+  });
+  const expenseData = months.map(d => {
+    const k = monthKey(d);
+    return transactions.filter(t => t.type === 'expense' && t.date.startsWith(k)).reduce((s, t) => s + t.amount, 0);
+  });
+  if (charts.trend) charts.trend.destroy();
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  charts.trend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'הכנסות', data: incomeData, borderColor: '#48bb78', backgroundColor: 'rgba(72,187,120,0.1)', fill: true, tension: 0.3, borderWidth: 3 },
+        { label: 'הוצאות', data: expenseData, borderColor: '#f56565', backgroundColor: 'rgba(245,101,101,0.1)', fill: true, tension: 0.3, borderWidth: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { ticks: { callback: v => fmt(v) } } }
+    }
+  });
+}
+
+function exportData() {
+  const data = { transactions, budgets, recurringRules, exchangeRate, accounts, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'גיבוי-פיננסי-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!confirm('האם להחליף את כל הנתונים הקיימים בנתוני הקובץ?')) return;
+      transactions = data.transactions || [];
+      budgets = data.budgets || {};
+      recurringRules = data.recurringRules || [];
+      if (data.exchangeRate) exchangeRate = data.exchangeRate;
+      if (data.accounts) accounts = data.accounts;
+      save();
+      render();
+      alert('הנתונים יובאו בהצלחה!');
+    } catch (err) {
+      alert('שגיאה בקריאת הקובץ');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// Initialization
+document.getElementById('date').valueAsDate = new Date();
+populateCategorySelect();
+populateFilterCategories();
+fetchExchangeRate(false).then(() => {
+  materializeRecurring();
+  materializeSavingsRecurring();
+  applyMonthlyReturns();
+  applyMonthlyPensions();
+  save();
+  render();
+});
+render();
+</script>
+</body>
+</html>
